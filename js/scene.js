@@ -231,6 +231,7 @@
       tag.style.left = (c.x / W) * 100 + '%';
       tag.textContent = c.name;
       overlay.appendChild(tag);
+      c.tagEl = tag;
 
       if (c.quote) {
         const b = document.createElement('div');
@@ -402,7 +403,7 @@
       const bike = bikeState(t);
       const isaacIn = bike.visible && !bike.faceRight && bike.x < W - 16;
       const targetsOf = (team) => {
-        const list = cast.filter((c) => c.team !== team).map((c) => ({ ent: c, x: posX(c, L), y: FEET - 7 }));
+        const list = cast.filter((c) => c.team !== team && !c.hidden).map((c) => ({ ent: c, x: posX(c, L), y: FEET - 7 }));
         if (team === 'A' && isaacIn) list.push({ ent: isaac, x: bike.x + 19, y: FEET - 14 });
         return list;
       };
@@ -424,7 +425,7 @@
       };
 
       cast.forEach((c) => {
-        if (t < c.next) return;
+        if (t < c.next || c.hidden) return;
         const busy = (c.couple && L.facing) || (c.hold && c.speaking);
         if (busy) { c.next = t + rand(0.5, 1.2); return; }
         const x = posX(c, L);
@@ -437,6 +438,21 @@
         const m = bikePoint(bike, 1, 11);
         fire(isaac, m.x, m.y, 'B');
         schedule(isaac, 0.9, 2.2);
+      }
+
+      // Railander no caça: rasante metralhando a equipe da direita
+      const jt = jetState(t);
+      if (jt.active && jt.x > 130 && jt.x < 330 && t >= jet.next) {
+        const nose = jetPoint(jt, 27, 5);
+        const ahead = targetsOf('A').filter((tg) => tg.x > nose.x - 6 && tg.x < nose.x + 120);
+        if (ahead.length) {
+          const tg = ahead[Math.floor(Math.random() * ahead.length)];
+          const ty = tg.y + rand(-2, 2), dx = tg.x - nose.x, dy = ty - nose.y;
+          const dist = Math.hypot(dx, dy) || 1, speed = 360;
+          tracers.push({ x: nose.x, y: nose.y, ux: dx / dist, uy: dy / dist, speed, life: dist / speed, target: tg.ent, tx: tg.x, ty });
+          jet.flashUntil = t + 0.05;
+        }
+        jet.next = t + 0.09;
       }
     }
 
@@ -500,6 +516,10 @@
 
     updateBike(t, dt);
     updateBombs(t, dt, L);
+    const jtNow = jetState(t);
+    const rail = cast[3];
+    rail.hidden = !reduce && jtNow.away;
+    if (rail.tagEl) rail.tagEl.classList.toggle('is-hidden', rail.hidden);
 
     // brasas
     embers.forEach((e) => {
@@ -806,6 +826,78 @@
     });
   }
 
+  // ---------- Railander no caça (voo rasante) ----------
+  const JET_CYCLE = 20, JET_SPEED = 92, JET_W = 30, JET_H = 12;
+  const jet = { next: 0, flashUntil: 0 };
+  const jetCv = document.createElement('canvas');
+  jetCv.width = JET_W; jetCv.height = JET_H;
+  const jg = jetCv.getContext('2d');
+
+  // trajetória: entra pela esquerda no alto, mergulha sobre a equipe da direita e sai baixo
+  const jetY = (x) => Math.max(24, 92 - 62 * Math.pow((x - 245) / 205, 2));
+  function jetState(t) {
+    const rt = (t + 9) % JET_CYCLE; // primeira passagem ~12 s depois de abrir (fora do avião das meninas)
+    const x = -40 + (rt - 1) * JET_SPEED;
+    const active = rt >= 1 && x < W + 40;
+    const away = rt >= 0.4 && rt < 6.4; // some do chão um pouco antes e volta depois do voo
+    const y = jetY(x);
+    const slope = (jetY(x + 1) - jetY(x - 1)) / 2;
+    return { x, y, angle: Math.atan(slope), active, away, rt };
+  }
+  function jetPoint(j, ox, oy) {
+    const cx = JET_W / 2, cy = JET_H / 2;
+    const dx = ox - cx, dy = oy - cy, c = Math.cos(j.angle), sn = Math.sin(j.angle);
+    return { x: j.x + dx * c - dy * sn, y: j.y + dx * sn + dy * c };
+  }
+
+  function paintJet(t, flash) {
+    const g = jg;
+    g.clearRect(0, 0, JET_W, JET_H);
+    const OUTL = '#1a1020', BODY = '#6f7a5a', BODY2 = '#8e9a74', DARK = '#4a533b', ORANGE = '#ff6a2b';
+    // asa de trás e cauda
+    g.fillStyle = DARK; g.fillRect(9, 3, 7, 2);
+    g.fillStyle = OUTL; g.fillRect(1, 0, 4, 1); g.fillRect(0, 1, 1, 5);
+    g.fillStyle = BODY; g.fillRect(1, 1, 4, 5);
+    g.fillStyle = ORANGE; g.fillRect(2, 1, 2, 1);
+    // fuselagem
+    g.fillStyle = OUTL; g.fillRect(1, 5, 24, 1); g.fillRect(1, 9, 24, 1); g.fillRect(25, 6, 2, 3); g.fillRect(27, 7, 1, 1);
+    g.fillStyle = BODY; g.fillRect(1, 6, 24, 3); g.fillRect(25, 7, 2, 1);
+    g.fillStyle = BODY2; g.fillRect(2, 6, 22, 1);
+    g.fillStyle = ORANGE; g.fillRect(6, 8, 14, 1);
+    // cabine com o Railander (bandana vermelha)
+    g.fillStyle = OUTL; g.fillRect(15, 2, 6, 1); g.fillRect(14, 3, 1, 2); g.fillRect(21, 3, 1, 2);
+    g.fillStyle = '#9fd8ff'; g.fillRect(15, 3, 6, 2);
+    const R = S.CHARS.Railander;
+    g.fillStyle = R.hair; g.fillRect(16, 2, 3, 1);
+    g.fillStyle = R.bandana; g.fillRect(16, 3, 3, 1); g.fillRect(15, 3, 1, 1);
+    g.fillStyle = R.skin; g.fillRect(17, 4, 2, 1);
+    g.fillStyle = OUTL; g.fillRect(18, 4, 1, 1);
+    // asa da frente, míssil e chama do motor
+    g.fillStyle = OUTL; g.fillRect(9, 9, 10, 1);
+    g.fillStyle = DARK; g.fillRect(10, 10, 8, 1);
+    g.fillStyle = '#d6dae4'; g.fillRect(12, 11, 4, 1);
+    g.fillStyle = Math.floor(t * 18) % 2 ? '#ffd166' : '#ff8a3d'; g.fillRect(0, 7, 1, 1);
+    if (flash) { g.fillStyle = '#fff6c2'; g.fillRect(28, 7, 2, 1); g.fillStyle = '#ffd166'; g.fillRect(28, 6, 1, 1); g.fillRect(28, 8, 1, 1); }
+  }
+
+  function drawJet(t) {
+    const j = jetState(t);
+    if (!j.active || reduce) return;
+    paintJet(t, t < jet.flashUntil);
+    // rastro de fumaça
+    const tail = jetPoint(j, 0, 7);
+    if (Math.random() < 0.6) smoke.push({ x: tail.x, y: tail.y, vx: rand(-8, -2), vy: rand(-4, 2), life: 0.8, max: 0.8 });
+    // sombra no chão quando passa baixo
+    const sh = Math.max(0, 1 - (FEET - j.y) / 70);
+    if (sh > 0) { ctx.fillStyle = `rgba(0,0,0,${(0.35 * sh).toFixed(2)})`; ctx.fillRect(Math.round(j.x) - 10, FEET, 20, 1); }
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    ctx.translate(Math.round(j.x), Math.round(j.y));
+    ctx.rotate(j.angle);
+    ctx.drawImage(jetCv, -JET_W / 2, -JET_H / 2);
+    ctx.restore();
+  }
+
   // ---------- render ----------
   function render(t) {
     const L = love(t);
@@ -836,6 +928,7 @@
 
     // personagens
     cast.forEach((c) => {
+      if (c.hidden) return;
       let x = c.x, dir = c.dir, hold = 'gun', isLove = false;
       if (c.couple) {
         const offset = Math.round(L.lean * 7);
@@ -860,6 +953,7 @@
     });
 
     drawBike(t);
+    drawJet(t);
     drawBooms();
 
     sparks.forEach((s) => {
