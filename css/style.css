@@ -549,6 +549,16 @@ svg { width: 1em; height: 1em; flex: none; }
 .share-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
 .share-actions .btn { flex: 1 1 160px; }
 
+/* ---------- botões de equipes alinhados no celular ---------- */
+@media (max-width: 620px) {
+  #equipes .card-head { flex-direction: column; align-items: stretch; }
+  #equipes .card-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; }
+  #equipes .card-actions .btn { width: 100%; }
+  #btnBalanced, #btnDraw { grid-column: 1 / -1; }
+  .builder-next { display: grid; grid-template-columns: 1fr; }
+  .builder-next .btn { width: 100%; }
+}
+
 /* ---------- som ---------- */
 .sound-btn {
   display: grid; place-items: center; width: 40px; height: 40px; border-radius: 10px; flex: none;
