@@ -6,7 +6,17 @@
  * e a lista de e-mails Google que podem registrar partidas.
  * Esses dados não são secretos: quem protege o placar são as regras em firestore.rules.
  */
-window.FREE_FAMILIA_FIREBASE = null;
+window.FREE_FAMILIA_FIREBASE = {
+  config: {
+    apiKey: 'AIzaSyAO8nee0AYeE2VThS9yfz4MMEnk4yvbSrU',
+    authDomain: 'free-familia.firebaseapp.com',
+    projectId: 'free-familia',
+    storageBucket: 'free-familia.firebasestorage.app',
+    messagingSenderId: '940142368796',
+    appId: '1:940142368796:web:689b0ec359526593ee27d9',
+  },
+  admins: ['alessonmiranda@gmail.com'],
+};
 
 /* Exemplo:
 window.FREE_FAMILIA_FIREBASE = {
