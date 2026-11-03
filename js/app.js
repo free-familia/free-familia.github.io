@@ -366,7 +366,7 @@
     setTimeout(() => $('builder').classList.remove('is-revealed'), 700);
     Sfx.play('rematch');
     toast(`Revanche! Mesmas equipes do último combate (${m.teams.A.score}×${m.teams.B.score}).`);
-    document.getElementById('placar').scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+    location.hash = 'placar';
   }
 
   let drawing = false;
@@ -454,14 +454,13 @@
     form.classList.toggle('lead-b', sb > sa);
     hint.className = 'hint';
     if (readOnly) {
-      hint.textContent = fbAuth
-        ? 'Toque em "Entrar para registrar" (no histórico) com a conta autorizada para salvar partidas.'
-        : 'Você está vendo o placar em modo leitura.';
+      if (fbAuth) hint.innerHTML = 'Para salvar partidas, <button type="button" class="link-btn" data-login>entre com a conta autorizada</button>.';
+      else hint.textContent = 'Você está vendo o placar em modo leitura.';
       btn.disabled = true;
       return;
     }
     if (!A.length || !B.length) {
-      hint.textContent = 'Monte as duas equipes no passo 1 para registrar.';
+      hint.innerHTML = 'Monte as duas equipes no <a href="#inicio">Início</a> para registrar.';
       btn.disabled = true;
       return;
     }
@@ -949,6 +948,7 @@
     setInterval(() => { if (!dateTouched) $('matchDate').value = nowLocal(); }, 30000);
 
     $('scoreForm').addEventListener('submit', register);
+    $('registerHint').addEventListener('click', (e) => { if (e.target.closest('[data-login]')) $('btnAuth').click(); });
     $('historyFilter').addEventListener('change', renderHistory);
     $('historyList').addEventListener('click', (e) => {
       const b = e.target.closest('[data-delete]');
@@ -972,12 +972,50 @@
     });
   }
 
+  // ---------- páginas e menu lateral ----------
+  const ROUTES = ['inicio', 'placar', 'ranking', 'conquistas', 'historico'];
+  function openMenu() {
+    document.body.classList.add('menu-open');
+    $('btnMenu').setAttribute('aria-expanded', 'true');
+    const cur = document.querySelector('.drawer-link[aria-current="page"]') || document.querySelector('.drawer-link');
+    setTimeout(() => cur && cur.focus(), 50);
+  }
+  function closeMenu(focusBtn) {
+    if (!document.body.classList.contains('menu-open')) return;
+    document.body.classList.remove('menu-open');
+    $('btnMenu').setAttribute('aria-expanded', 'false');
+    if (focusBtn) $('btnMenu').focus();
+  }
+  function route() {
+    const h = location.hash.slice(1);
+    const r = ROUTES.includes(h) ? h : 'inicio';
+    document.querySelectorAll('[data-view]').forEach((el) => { el.hidden = el.dataset.view !== r; });
+    document.querySelectorAll('[data-route]').forEach((a) => {
+      if (a.dataset.route === r) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+    });
+    document.body.dataset.route = r;
+    closeMenu(false);
+    window.scrollTo(0, 0);
+  }
+  function bindMenu() {
+    $('btnMenu').addEventListener('click', () => (document.body.classList.contains('menu-open') ? closeMenu(true) : openMenu()));
+    $('btnMenuClose').addEventListener('click', () => closeMenu(true));
+    $('drawerBackdrop').addEventListener('click', () => closeMenu(true));
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenu(true); });
+    document.querySelectorAll('.drawer-link').forEach((a) => a.addEventListener('click', () => {
+      if (a.getAttribute('href') === location.hash || (!location.hash && a.dataset.route === 'inicio')) route();
+    }));
+    window.addEventListener('hashchange', route);
+    route();
+  }
+
   // ---------- init ----------
   $('matchDate').value = nowLocal();
   renderPresence();
   renderAllTeams();
   renderData();
   bind();
+  bindMenu();
   setSync('local');
   connectShared();
   setInterval(() => renderStats(computeRanking()), 60000);
