@@ -74,7 +74,7 @@
     const note = $('footerNote');
     if (note) note.textContent = shared
       ? 'Os combates ficam salvos online: todo mundo que abre esta página vê o mesmo histórico e ranking.'
-      : 'Os dados ficam salvos neste navegador. Faça um backup para levar para outro aparelho.';
+      : 'Os dados ficam salvos neste navegador.';
   }
 
   async function writeMatch(m) {
@@ -955,12 +955,6 @@
       if (b) removeMatch(b.dataset.delete);
     });
 
-    $('btnExport').addEventListener('click', exportData);
-    $('fileImport').addEventListener('change', (e) => {
-      const f = e.target.files && e.target.files[0];
-      if (f) importData(f);
-      e.target.value = '';
-    });
 
     window.addEventListener('storage', (e) => {
       if (e.key === KEY) {
