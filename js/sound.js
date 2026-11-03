@@ -72,7 +72,7 @@
     osc.type = opts.type || 'square';
     osc.frequency.setValueAtTime(freq, t0);
     if (opts.slide) osc.frequency.exponentialRampToValueAtTime(opts.slide, t0 + dur);
-    const vol = (opts.vol || 0.12);
+    const vol = Math.min(0.3, (opts.vol || 0.12) * 1.6);
     gain.gain.setValueAtTime(0.0001, t0);
     gain.gain.exponentialRampToValueAtTime(vol, t0 + 0.008);
     gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);

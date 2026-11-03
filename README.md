@@ -41,3 +41,6 @@ Só os e-mails autorizados registram ou apagam partidas (botão **Entrar para re
    pelo(s) e-mail(s) que podem registrar e clique em *Publicar*.
 4. **Configuração da página**: preencha `js/firebase-config.js` com o `firebaseConfig` e a lista `admins`
    (os mesmos e-mails das regras).
+
+> Ao alterar CSS/JS, atualize o número `?v=` nos links de `index.html` para que os celulares
+> baixem a versão nova (o GitHub Pages guarda os arquivos em cache por alguns minutos).
