@@ -187,30 +187,15 @@
     return L;
   }
 
-  function buildBarricade() {
-    const L = layer(), g = L.getContext('2d');
-    const bag = (x, y) => {
-      g.fillStyle = '#6d5530';
-      g.fillRect(x + 1, y, 6, 1); g.fillRect(x, y + 1, 8, 4); g.fillRect(x + 1, y + 5, 6, 1);
-      g.fillStyle = '#b89a62'; g.fillRect(x + 1, y + 1, 6, 4);
-      g.fillStyle = '#d6bd85'; g.fillRect(x + 2, y + 1, 4, 1);
-      g.fillStyle = '#9a7e4c'; g.fillRect(x + 1, y + 4, 6, 1);
-    };
-    [144, 152, 160, 168].forEach((x) => bag(x, 115));
-    [148, 156, 164].forEach((x) => bag(x, 110));
-    return L;
-  }
-
   const BG = buildBackground();
-  const FG = buildBarricade();
 
   // ---------- elenco ----------
   const cast = [
     { name: 'Iago', x: 26, team: 'A', dir: 1 },
     { name: 'Aline', x: 54, team: 'A', dir: 1, couple: 'L' },
     { name: 'Miguel', x: 80, team: 'A', dir: 1, couple: 'R' },
-    { name: 'Railander', x: 116, team: 'A', dir: 1, shooter: true },
-    { name: 'Benjamin', x: 190, team: 'B', dir: -1, shooter: true },
+    { name: 'Railander', x: 116, team: 'A', dir: 1 },
+    { name: 'Benjamin', x: 190, team: 'B', dir: -1 },
     { name: 'Talisson', x: 218, team: 'B', dir: -1, quote: 'Romanos 6.23', hold: 'book', tail: 50 },
     { name: 'Alesson', x: 246, team: 'B', dir: -1 },
     { name: 'Isaías', x: 274, team: 'B', dir: -1, quote: 'Tá cheio de propaganda aqui!', hold: 'phone', tail: 80 },
@@ -220,7 +205,9 @@
     c.next = 1 + i * 0.4;
     c.burst = 3;
     c.flashUntil = 0;
+    c.hitUntil = 0;
   });
+  const isaac = { name: 'Isaac', team: 'B', next: 4, burst: 4, flashUntil: 0, hitUntil: 0 };
 
   // falas: horários dentro de um ciclo de 12 s
   const BUBBLE_CYCLE = 12;
@@ -354,8 +341,8 @@
     const release = 3.06;
     if (pt < release) return { landed: false };
     let top = 18 + (pt - release) * 22;
-    const landed = top >= 104;
-    if (landed) top = 104;
+    const landed = top >= 111;
+    if (landed) top = 111;
     let alpha = 1;
     if (pt > 13) alpha = Math.max(0, 1 - (pt - 13));
     if (alpha <= 0) return { landed: false };
@@ -395,29 +382,66 @@
   }
 
   // ---------- atualização ----------
+  function posX(c, L) {
+    if (!c.couple) return c.x;
+    const offset = Math.round(L.lean * 7);
+    return c.x + (c.couple === 'L' ? offset : -offset);
+  }
+
   function update(t, dt) {
     const L = love(t);
 
-    // tiros dos atiradores da linha de frente (acertam a barricada)
-    cast.forEach((c) => {
-      if (!c.shooter || reduce) return;
-      if (t >= c.next) {
-        const left = c.x - 6;
-        const mx = c.dir > 0 ? left + 13 : left - 2;
-        tracers.push({ x: mx, y: FEET - 17 + 10, vx: 280 * c.dir, target: c.dir > 0 ? 144 : 176 });
-        c.flashUntil = t + 0.06;
+    // troca de tiros entre as equipes (Isaac atira de cima da moto)
+    if (!reduce) {
+      const bike = bikeState(t);
+      const isaacIn = bike.visible && !bike.faceRight && bike.x < W - 16;
+      const targetsOf = (team) => {
+        const list = cast.filter((c) => c.team !== team).map((c) => ({ ent: c, x: posX(c, L), y: FEET - 7 }));
+        if (team === 'A' && isaacIn) list.push({ ent: isaac, x: bike.x + 19, y: FEET - 14 });
+        return list;
+      };
+      const fire = (shooter, mx, my, team) => {
+        const targets = targetsOf(team);
+        if (!targets.length) return;
+        const tg = targets[Math.floor(Math.random() * targets.length)];
+        const ty = tg.y + rand(-2, 2);
+        const dx = tg.x - mx, dy = ty - my;
+        const dist = Math.hypot(dx, dy) || 1;
+        const speed = 300;
+        tracers.push({ x: mx, y: my, ux: dx / dist, uy: dy / dist, speed, life: dist / speed, target: tg.ent, tx: tg.x, ty });
+        shooter.flashUntil = t + 0.06;
+      };
+      const schedule = (c, min, max) => {
         c.burst--;
-        if (c.burst > 0) c.next = t + 0.13;
-        else { c.burst = 2 + Math.floor(Math.random() * 3); c.next = t + rand(1.4, 3.4); }
+        if (c.burst > 0) c.next = t + 0.12;
+        else { c.burst = 2 + Math.floor(Math.random() * 3); c.next = t + rand(min, max); }
+      };
+
+      cast.forEach((c) => {
+        if (t < c.next) return;
+        const busy = (c.couple && L.facing) || (c.hold && c.speaking);
+        if (busy) { c.next = t + rand(0.5, 1.2); return; }
+        const x = posX(c, L);
+        const mx = c.dir > 0 ? x + 7 : x - 8;
+        fire(c, mx, FEET - 7, c.team);
+        schedule(c, 1.6, 4.2);
+      });
+
+      if (isaacIn && t >= isaac.next) {
+        const m = bikePoint(bike, 1, 11);
+        fire(isaac, m.x, m.y, 'B');
+        schedule(isaac, 0.9, 2.2);
       }
-    });
+    }
 
     for (let i = tracers.length - 1; i >= 0; i--) {
       const p = tracers[i];
-      p.x += p.vx * dt;
-      if ((p.vx > 0 && p.x >= p.target) || (p.vx < 0 && p.x <= p.target)) {
-        for (let k = 0; k < 4; k++) {
-          sparks.push({ x: p.target, y: p.y + rand(-1, 1), vx: -Math.sign(p.vx) * rand(10, 40), vy: rand(-40, -5), life: 0.3 });
+      const step = Math.min(p.life, dt);
+      p.x += p.ux * p.speed * step; p.y += p.uy * p.speed * step; p.life -= dt;
+      if (p.life <= 0) {
+        p.target.hitUntil = t + 0.14;
+        for (let k = 0; k < 5; k++) {
+          sparks.push({ x: p.tx, y: p.ty + rand(-1, 1), vx: -Math.sign(p.ux) * rand(10, 45), vy: rand(-45, -5), life: 0.3 });
         }
         tracers.splice(i, 1);
       }
@@ -449,7 +473,7 @@
     const pt = t % 16;
     if (pt > 7 && pt < 12.5 && t - lastSmoke > 0.1) {
       lastSmoke = t;
-      smoke.push({ x: 160 + rand(-2, 2), y: 102, vx: rand(2, 7), vy: rand(-16, -9), life: 2.6, max: 2.6 });
+      smoke.push({ x: 160 + rand(-2, 2), y: 109, vx: rand(2, 7), vy: rand(-16, -9), life: 2.6, max: 2.6 });
     }
     for (let i = smoke.length - 1; i >= 0; i--) {
       const s = smoke[i];
@@ -508,7 +532,7 @@
   }
 
   // desenha moto + Isaac virados para a esquerda no canvas auxiliar
-  function paintBike(spin, blink, revving) {
+  function paintBike(spin, blink, revving, flash) {
     const g = bg2;
     g.clearRect(0, 0, BIKE_W, BIKE_H);
     const RED = '#e8453c', RED2 = '#ff7a6b', DARK = '#15151c', CHROME = '#c8ccd8';
@@ -549,8 +573,26 @@
     g.fillStyle = '#1a1020'; g.fillRect(10, 15, 6, 1);
     g.fillStyle = T.T; g.fillRect(12, 14, 4, 1);
     g.fillStyle = skin; g.fillRect(10, 13, 2, 2);
+    // braço direito com a arma apontada para a frente
+    g.fillStyle = T.t; g.fillRect(13, 12, 2, 1);
+    g.fillStyle = skin; g.fillRect(11, 11, 2, 1);
+    g.fillStyle = '#26262e'; g.fillRect(4, 11, 7, 1); g.fillRect(8, 12, 2, 1);
+    g.fillStyle = '#60657a'; g.fillRect(3, 11, 1, 1); g.fillRect(6, 11, 1, 1);
+    if (flash) {
+      g.fillStyle = '#fff6c2'; g.fillRect(2, 11, 1, 1);
+      g.fillStyle = '#ffd166'; g.fillRect(1, 11, 1, 1);
+      g.fillStyle = '#ffb547'; g.fillRect(2, 10, 1, 1); g.fillRect(2, 12, 1, 1);
+    }
     g.fillStyle = T.P; g.fillRect(17, 16, 4, 2); g.fillRect(16, 18, 3, 4);
     g.fillStyle = '#2a1d14'; g.fillRect(14, 22, 4, 1);
+  }
+
+  // ponto do sprite da moto (virada para a esquerda) no mundo, considerando o empinar
+  function bikePoint(b, ox, oy) {
+    const px = b.x + PIVOT_X, py = FEET + 1 + b.bounce;
+    const dx = ox - PIVOT_X, dy = oy - PIVOT_Y;
+    const c = Math.cos(b.angle), sn = Math.sin(b.angle);
+    return { x: px + dx * c - dy * sn, y: py + dx * sn + dy * c };
   }
 
   function bikeState(t) {
@@ -622,14 +664,14 @@
     if (!b.visible) return;
     const spin = b.moving || b.revving ? t * 22 : 0;
     const idleShake = !b.moving && b.angle === 0 && Math.floor(t * 12) % 2 ? 1 : 0;
-    paintBike(spin, (t % 3.7) < 0.12, b.revving);
+    paintBike(spin, (t % 3.7) < 0.12, b.revving, t < isaac.flashUntil);
     // sombra
     ctx.fillStyle = 'rgba(0,0,0,.35)';
     ctx.fillRect(b.x + 3, FEET, 26, 1);
     ctx.save();
     ctx.imageSmoothingEnabled = false;
     const px = b.faceRight ? b.x + (BIKE_W - PIVOT_X) : b.x + PIVOT_X;
-    ctx.translate(px, FEET + 1 + b.bounce - idleShake);
+    ctx.translate(px + (t < isaac.hitUntil ? 1 : 0), FEET + 1 + b.bounce - idleShake);
     if (b.faceRight) ctx.scale(-1, 1);
     ctx.rotate(b.angle);
     ctx.drawImage(bikeCv, -PIVOT_X, -PIVOT_Y);
@@ -656,11 +698,11 @@
       ctx.fillRect(Math.round(s.x - size / 2), Math.round(s.y - size / 2), size, size);
     });
 
-    ctx.drawImage(FG, 0, 0);
-
-    ctx.fillStyle = '#ffe27a';
     tracers.forEach((p) => {
-      ctx.fillRect(Math.round(p.vx > 0 ? p.x - 6 : p.x), Math.round(p.y), 6, 1);
+      for (let k = 0; k < 6; k++) {
+        ctx.fillStyle = k < 2 ? '#fff6c2' : '#ffd166';
+        ctx.fillRect(Math.round(p.x - p.ux * k), Math.round(p.y - p.uy * k), 1, 1);
+      }
     });
 
     // personagens
@@ -677,9 +719,10 @@
       const bob = Math.sin(t * 2.6 + c.phase) > 0.2 ? 0 : 1;
       const blink = (t + c.phase * 1.7) % 4.2 < 0.12;
       const flash = t < c.flashUntil;
-      const recoil = flash ? -dir : 0;
+      const hit = t < c.hitUntil;
+      const recoil = (flash ? -dir : 0) + (hit ? -c.dir : 0);
       const screen = Math.floor(t * 6) % 2 ? '#7fe3ff' : '#ffe27a';
-      const pixels = S.build(c.name, { team: c.team, hold, blink, love: isLove, flash, screen });
+      const pixels = S.build(c.name, { team: c.team, hold, blink: blink || hit, love: isLove, flash, screen });
 
       ctx.fillStyle = 'rgba(0,0,0,.35)';
       ctx.fillRect(x - 5, FEET, 10, 1);

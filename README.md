@@ -2,7 +2,7 @@
 
 Página para registrar os duelos de Free Fire da família.
 
-- **Cabeçalho animado em pixel art**: campo de batalha ao pôr do sol, avião soltando airdrop, tiros na barricada,
+- **Cabeçalho animado em pixel art**: campo de batalha ao pôr do sol, avião soltando airdrop, as duas equipes trocando tiros,
   Aline e Miguel apaixonados (corações, olhos de coração), Talisson com a Bíblia ("Romanos 6.23")
   Isaías cercado de anúncios ("Tá cheio de propaganda aqui!") e Isaac chegando de moto dando grau.
 - **Montar equipes**: marque quem vai jogar, sorteie (máx. 4 por equipe, o resto fica no banco) ou escale manualmente.
