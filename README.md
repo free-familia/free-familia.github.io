@@ -31,11 +31,11 @@ Só os e-mails autorizados registram ou apagam partidas (botão **Entrar para re
 1. **Repositório público + GitHub Pages**: em *Settings → General → Danger Zone*, torne o repositório público
    (GitHub Pages gratuito não funciona em repositório privado). Depois, em *Settings → Pages*, escolha
    *Deploy from a branch* e a branch com a página, pasta `/ (root)`.
-   O endereço fica `https://free-familia.github.io/free-familia/`.
+   O endereço fica `https://jogatina-familia.github.io/` (organização `jogatina-familia`, repositório `jogatina-familia.github.io`).
 2. **Projeto Firebase** (gratuito): em https://console.firebase.google.com crie um projeto.
    - *Build → Firestore Database → Criar banco* (modo produção).
    - *Build → Authentication → Método de login → Google → Ativar*.
-   - *Authentication → Configurações → Domínios autorizados → Adicionar* `free-familia.github.io`.
+   - *Authentication → Configurações → Domínios autorizados → Adicionar* `jogatina-familia.github.io`.
    - *Configurações do projeto → Seus apps → Web (</>)*: registre o app e copie o objeto `firebaseConfig`.
 3. **Regras**: em *Firestore → Regras*, cole o conteúdo de `firestore.rules`, troque `seu-email@gmail.com`
    pelo(s) e-mail(s) que podem registrar e clique em *Publicar*.
