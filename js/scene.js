@@ -191,14 +191,14 @@
 
   // ---------- elenco ----------
   const cast = [
-    { name: 'Iago', x: 26, team: 'A', dir: 1 },
-    { name: 'Aline', x: 54, team: 'A', dir: 1, couple: 'L' },
-    { name: 'Miguel', x: 80, team: 'A', dir: 1, couple: 'R' },
+    { name: 'Iago', x: 26, team: 'A', dir: 1, quote: 'Bora Tia!', tail: 22 },
+    { name: 'Aline', x: 54, team: 'A', dir: 1, couple: 'L', quote: 'Miguel!', tail: 40 },
+    { name: 'Miguel', x: 80, team: 'A', dir: 1, couple: 'R', quote: 'Amor!', tail: 50 },
     { name: 'Railander', x: 116, team: 'A', dir: 1 },
     { name: 'Benjamin', x: 190, team: 'B', dir: -1 },
     { name: 'Talisson', x: 218, team: 'B', dir: -1, quote: 'Romanos 6.23', hold: 'book', tail: 50 },
     { name: 'Alesson', x: 246, team: 'B', dir: -1 },
-    { name: 'Isaías', x: 274, team: 'B', dir: -1, quote: 'Tá cheio de propaganda aqui!', hold: 'phone', tail: 80 },
+    { name: 'Isaías', x: 274, team: 'B', dir: -1, hold: 'phone' },
   ];
   cast.forEach((c, i) => {
     c.phase = i * 0.83;
@@ -211,7 +211,10 @@
 
   // falas: horários dentro de um ciclo de 12 s
   const BUBBLE_CYCLE = 12;
-  const bubbleTimes = { Talisson: [0.4, 5.6], 'Isaías': [6.2, 11.6] };
+  // Aline chama, Miguel responde logo antes do momento romântico (mesmo ciclo do casal)
+  const bubbleTimes = { Iago: [0.6, 3.6], Talisson: [0.4, 5.6], Aline: [4.5, 5.75], Miguel: [6.0, 7.4] };
+  const PHONE_TIME = [6.2, 11.6]; // Isaías no celular, cercado de anúncios
+  const STATIC_BUBBLES = ['Iago', 'Miguel', 'Talisson']; // sem animação: só estas aparecem
 
   // ---------- camada HTML (nomes e balões) ----------
   const bubbles = [];
@@ -250,7 +253,7 @@
   function updateBubbles(t) {
     const bt = t % BUBBLE_CYCLE;
     bubbles.forEach((b) => {
-      const on = reduce || (bt >= b.times[0] && bt < b.times[1]);
+      const on = reduce ? STATIC_BUBBLES.includes(b.c.name) : (bt >= b.times[0] && bt < b.times[1]);
       b.c.speaking = on;
       if (on !== b.on) { b.on = on; b.el.classList.toggle('is-on', on); b.shown = -1; }
       if (on) {
@@ -262,6 +265,8 @@
         }
       }
     });
+    const isaias = cast[7];
+    isaias.speaking = reduce || (bt >= PHONE_TIME[0] && bt < PHONE_TIME[1]);
   }
 
   // ---------- entidades dinâmicas ----------
@@ -494,6 +499,7 @@
     }
 
     updateBike(t, dt);
+    updateBombs(t, dt, L);
 
     // brasas
     embers.forEach((e) => {
@@ -679,6 +685,127 @@
     ctx.restore();
   }
 
+  // ---------- Dara, Lucélia e Ana: avião jogando granadas na equipe da esquerda ----------
+  const GIRLS = [
+    { name: 'Dara', hair: '#1e140d', skin: '#a86b42' },
+    { name: 'Lucélia', hair: '#c98a3a', skin: '#e3ad80' },
+    { name: 'Ana', hair: '#7a2a1c', skin: '#f0c49a' },
+  ];
+  const BOMB_CYCLE = 18, BOMB_Y = 24, BOMB_SPEED = 80;
+  const DROP_TARGETS = [118, 74, 34]; // onde as granadas caem (equipe da esquerda)
+  const grenades = [], booms = [];
+  let bombCycle = -1, dropped = 0;
+  const bannerEl = (() => {
+    if (!overlay) return null;
+    const el = document.createElement('span');
+    el.className = 'plane-banner';
+    el.textContent = GIRLS.map((g) => g.name).join(' • ');
+    overlay.appendChild(el);
+    return el;
+  })();
+
+  function bombPlaneX(t) {
+    const bt = (t + 13) % BOMB_CYCLE; // primeira passagem ~5 s depois de abrir
+    return { x: W + 60 - bt * BOMB_SPEED, cycle: Math.floor((t + 13) / BOMB_CYCLE) };
+  }
+
+  function drawBombPlane(px, t) {
+    const x = Math.round(px), y = BOMB_Y;
+    const OUTL = '#1a1020', BODY = '#ece6f5', SHADE = '#b9b3c8', PINK = '#ff5fa2';
+    // asa de trás
+    ctx.fillStyle = SHADE; ctx.fillRect(x + 13, y + 1, 8, 2);
+    // cauda
+    ctx.fillStyle = OUTL; ctx.fillRect(x + 29, y - 4, 4, 1); ctx.fillRect(x + 28, y - 3, 1, 6);
+    ctx.fillStyle = PINK; ctx.fillRect(x + 29, y - 3, 4, 6);
+    // fuselagem
+    ctx.fillStyle = OUTL; ctx.fillRect(x + 1, y + 2, 32, 1); ctx.fillRect(x, y + 3, 1, 6); ctx.fillRect(x + 1, y + 9, 32, 1); ctx.fillRect(x + 33, y + 3, 1, 6);
+    ctx.fillStyle = BODY; ctx.fillRect(x + 1, y + 3, 32, 6);
+    ctx.fillStyle = PINK; ctx.fillRect(x + 1, y + 7, 32, 1);
+    ctx.fillStyle = '#7fc8ff'; ctx.fillRect(x + 2, y + 3, 3, 2); // cabine
+    // janelas com as três
+    GIRLS.forEach((g, i) => {
+      const wx = x + 8 + i * 7, wy = y + 3;
+      ctx.fillStyle = '#7fc8ff'; ctx.fillRect(wx, wy, 5, 4);
+      ctx.fillStyle = g.hair; ctx.fillRect(wx + 1, wy, 3, 1); ctx.fillRect(wx + 1, wy + 1, 1, 3); ctx.fillRect(wx + 3, wy + 1, 1, 3);
+      ctx.fillStyle = g.skin; ctx.fillRect(wx + 2, wy + 1, 1, 2);
+      ctx.fillStyle = OUTL; ctx.fillRect(wx + 2, wy + 1, 1, 1);
+    });
+    // asa da frente e hélice
+    ctx.fillStyle = OUTL; ctx.fillRect(x + 11, y + 8, 12, 1);
+    ctx.fillStyle = SHADE; ctx.fillRect(x + 12, y + 9, 10, 2);
+    ctx.fillStyle = Math.floor(t * 20) % 2 ? '#d6dae4' : '#60657a';
+    ctx.fillRect(x - 2, y + 1, 1, 10);
+    ctx.fillStyle = OUTL; ctx.fillRect(x - 1, y + 5, 1, 2);
+    // corda até a faixa
+    ctx.fillStyle = 'rgba(240,240,255,.6)';
+    for (let k = 0; k < 8; k++) ctx.fillRect(x + 34 + k, y + 4 + Math.round(Math.sin(t * 6 + k * 0.6)), 1, 1);
+  }
+
+  function updateBombs(t, dt, L) {
+    if (reduce) return;
+    const { x, cycle } = bombPlaneX(t);
+    if (cycle !== bombCycle) { bombCycle = cycle; dropped = 0; }
+    const center = x + 17;
+    const fall = 1.25, carry = -45; // tempo de queda e deriva horizontal
+    while (dropped < DROP_TARGETS.length && center <= DROP_TARGETS[dropped] - carry * fall) {
+      grenades.push({ x: center, y: BOMB_Y + 10, vx: carry, vy: 4, spin: 0 });
+      dropped++;
+    }
+    for (let i = grenades.length - 1; i >= 0; i--) {
+      const g = grenades[i];
+      g.vy += 110 * dt; g.x += g.vx * dt; g.y += g.vy * dt; g.spin += dt * 14;
+      if (g.y >= FEET - 2) {
+        booms.push({ x: g.x, y: FEET - 2, life: 0.9, max: 0.9 });
+        for (let k = 0; k < 16; k++) {
+          const a = rand(Math.PI, Math.PI * 2), sp = rand(30, 90);
+          sparks.push({ x: g.x, y: FEET - 3, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: rand(0.25, 0.55) });
+        }
+        for (let k = 0; k < 6; k++) smoke.push({ x: g.x + rand(-4, 4), y: FEET - 4, vx: rand(-6, 6), vy: rand(-14, -6), life: 1.6, max: 1.6 });
+        cast.forEach((c) => {
+          if (c.team === 'A' && Math.abs(posX(c, L) - g.x) < 20) { c.hitUntil = t + 0.25; c.hopUntil = t + 0.3; }
+        });
+        grenades.splice(i, 1);
+      }
+    }
+    for (let i = booms.length - 1; i >= 0; i--) {
+      booms[i].life -= dt;
+      if (booms[i].life <= 0) booms.splice(i, 1);
+    }
+  }
+
+  function drawBombs(t) {
+    const { x } = bombPlaneX(t);
+    const visible = x > -50 && x < W + 10;
+    if (visible) drawBombPlane(x, t);
+    if (bannerEl) {
+      bannerEl.style.left = ((x + 42) / W) * 100 + '%';
+      bannerEl.style.top = ((BOMB_Y + 5) / H) * 100 + '%';
+      bannerEl.classList.toggle('is-hidden', !(x > -120 && x + 42 < W));
+    }
+    grenades.forEach((g) => {
+      const gx = Math.round(g.x), gy = Math.round(g.y);
+      ctx.fillStyle = '#1a1020'; ctx.fillRect(gx - 2, gy - 1, 5, 4); ctx.fillRect(gx - 1, gy - 2, 3, 6);
+      ctx.fillStyle = '#4f7a3a'; ctx.fillRect(gx - 1, gy - 1, 3, 4);
+      ctx.fillStyle = '#7fae5c'; ctx.fillRect(gx - 1, gy - 1, 1, 1);
+      ctx.fillStyle = '#d6dae4'; ctx.fillRect(gx + (Math.floor(g.spin) % 2 ? 1 : -1), gy - 3, 1, 1);
+    });
+  }
+
+  function drawBooms() {
+    booms.forEach((b) => {
+      const k = 1 - b.life / b.max;
+      const r = Math.round(3 + Math.min(1, k * 2.5) * 12);
+      ctx.globalAlpha = Math.max(0, 1 - k * 1.2);
+      for (let yy = -r; yy <= 0; yy++) {
+        const hw = Math.floor(Math.sqrt(r * r - yy * yy));
+        const inner = r - Math.abs(yy) < 3;
+        ctx.fillStyle = k < 0.15 ? '#fff6c2' : inner ? '#ff8a3d' : '#ffd166';
+        ctx.fillRect(Math.round(b.x) - hw, b.y + yy, hw * 2, 1);
+      }
+      ctx.globalAlpha = 1;
+    });
+  }
+
   // ---------- render ----------
   function render(t) {
     const L = love(t);
@@ -691,6 +818,7 @@
 
     clouds.forEach(drawCloud);
     drawAirdrop(t);
+    drawBombs(t);
 
     smoke.forEach((s) => {
       const k = 1 - s.life / s.max;
@@ -727,10 +855,12 @@
 
       ctx.fillStyle = 'rgba(0,0,0,.35)';
       ctx.fillRect(x - 5, FEET, 10, 1);
-      S.draw(ctx, pixels, x - 6 + recoil, FEET - 17 + bob, dir < 0);
+      const hop = t < (c.hopUntil || 0) ? -2 : 0;
+      S.draw(ctx, pixels, x - 6 + recoil, FEET - 17 + bob + hop, dir < 0);
     });
 
     drawBike(t);
+    drawBooms();
 
     sparks.forEach((s) => {
       ctx.fillStyle = s.life > 0.15 ? '#fff6c2' : '#ff8a3d';

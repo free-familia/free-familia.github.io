@@ -164,7 +164,16 @@ svg { width: 1em; height: 1em; flex: none; }
 .bubble-rest { color: transparent; }
 .bubble[data-who='Talisson'] { background: #fff3c4; }
 .bubble[data-who='Talisson']::after { background: #fff3c4; }
-.is-static .bubble[data-who='Talisson'] { bottom: 54%; }
+.plane-banner {
+  position: absolute; transform: translateY(-50%);
+  font-family: var(--pixel); font-size: clamp(6px, 1.1cqw, 11px); line-height: 1; white-space: nowrap;
+  color: #1a1020; background: #fff3c4; padding: .5em .8em .45em; border-radius: 2px;
+  box-shadow: 0 0 0 2px #ff5fa2, 3px 3px 0 2px rgba(0, 0, 0, .3);
+  animation: banner-wave .5s steps(2) infinite alternate;
+  transition: opacity .2s;
+}
+.plane-banner.is-hidden { opacity: 0; }
+@keyframes banner-wave { to { transform: translateY(-50%) skewY(-2deg); } }
 
 .hero-copy {
   display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 12px 32px;

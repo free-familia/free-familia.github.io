@@ -4,7 +4,7 @@ Página para registrar os duelos de Free Fire da família.
 
 - **Cabeçalho animado em pixel art**: campo de batalha ao pôr do sol, avião soltando airdrop, as duas equipes trocando tiros,
   Aline e Miguel apaixonados (corações, olhos de coração), Talisson com a Bíblia ("Romanos 6.23")
-  Isaías cercado de anúncios ("Tá cheio de propaganda aqui!") e Isaac chegando de moto dando grau.
+  Iago gritando "Bora Tia!", Aline chamando "Miguel!" e ele respondendo "Amor!", Isaías no celular cercado de anúncios, um avião com Dara, Lucélia e Ana jogando granadas na equipe da esquerda e Isaac chegando de moto dando grau.
 - **Montar equipes**: marque quem vai jogar, sorteie (máx. 4 por equipe, o resto fica no banco) ou escale manualmente.
 - **Placar**: informe o placar final; cada integrante da equipe vencedora ganha 1 ponto no ranking.
 - **Ranking de vitórias** com aproveitamento e sequência de vitórias.
