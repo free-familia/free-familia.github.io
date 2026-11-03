@@ -9,6 +9,10 @@ Página para registrar os duelos de Free Fire da família.
 - **Placar**: informe o placar final; cada integrante da equipe vencedora ganha 1 ponto no ranking.
 - **Ranking de vitórias** com aproveitamento e sequência de vitórias.
 - **Histórico de combates** com data, hora, placar e integrantes de cada equipe (filtro por jogador, apagar com "desfazer").
+- **Sorteio equilibrado**: monta equipes de força parecida pelo aproveitamento no ranking.
+- **Revanche**: repete as equipes da última partida registrada.
+- **Conquistas**: Casal Imbatível, Em Chamas, Pregador, Grau Perfeito e outras, calculadas do histórico.
+- **Sons 8-bit** no sorteio, na vitória e nas conquistas, com botão de mudo no topo.
 - **Backup**: exportar/importar JSON (os dados ficam salvos no navegador — `localStorage`).
 
 ## Como usar

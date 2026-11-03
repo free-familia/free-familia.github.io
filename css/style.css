@@ -473,6 +473,39 @@ svg { width: 1em; height: 1em; flex: none; }
 .sync.is-stale i { background: var(--warn); }
 .is-readonly .icon-btn[data-delete] { display: none; }
 
+/* ---------- som ---------- */
+.sound-btn {
+  display: grid; place-items: center; width: 40px; height: 40px; border-radius: 10px; flex: none;
+  border: 1px solid var(--line-2); background: var(--surface-2); color: var(--text); font-size: 18px;
+}
+.sound-btn:hover { background: var(--surface-3); }
+.sound-btn .ico-off { display: none; }
+.sound-btn[aria-pressed='false'] { color: var(--faint); }
+.sound-btn[aria-pressed='false'] .ico-on { display: none; }
+.sound-btn[aria-pressed='false'] .ico-off { display: block; }
+.topbar-inner .nav { margin-left: auto; }
+
+/* ---------- botões extras ---------- */
+.btn-accent { border-color: rgba(255, 209, 102, .45); color: var(--gold); }
+.btn-accent:hover:not(:disabled) { background: rgba(255, 209, 102, .1); }
+
+/* ---------- conquistas ---------- */
+.badges { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.badge-card {
+  display: flex; gap: 12px; align-items: flex-start; padding: 14px; border-radius: 14px;
+  background: var(--bg-2); border: 1px dashed var(--line-2); opacity: .55; filter: grayscale(.9);
+  transition: opacity .2s, filter .2s;
+}
+.badge-card.is-on { opacity: 1; filter: none; border-style: solid; border-color: rgba(255, 209, 102, .35); background: linear-gradient(135deg, rgba(255, 209, 102, .08), transparent 60%), var(--bg-2); }
+.badge-icon { display: grid; place-items: center; width: 44px; height: 44px; flex: none; border-radius: 12px; background: var(--surface-2); font-size: 24px; line-height: 1; }
+.badge-card.is-on .badge-icon { background: rgba(255, 209, 102, .14); box-shadow: 0 0 18px -6px var(--gold); }
+.badge-info { min-width: 0; }
+.badge-name { margin: 0; font-weight: 700; }
+.badge-desc { margin: 2px 0 8px; font-size: 13px; color: var(--muted); }
+.badge-who { margin: 0; display: flex; flex-wrap: wrap; gap: 4px; font-size: 13px; }
+.rank-badges { display: inline-flex; gap: 2px; font-size: 14px; line-height: 1; }
+.rank-badges span { cursor: help; }
+
 /* ---------- footer ---------- */
 .footer { border-top: 1px solid var(--line); }
 .footer-inner {

@@ -295,11 +295,13 @@
 
   function move(p, to) {
     if (to !== 'bench' && teamPlayers(to).length >= MAX_TEAM) {
+      Sfx.play('error');
       toast(`A ${teamName(to)} já está completa — máximo de ${MAX_TEAM} no Free Fire.`, { tone: 'warn' });
       return;
     }
     state.assign[p] = to;
     save();
+    Sfx.play('click');
     renderAllTeams();
   }
 
@@ -322,26 +324,75 @@
     return out;
   }
 
-  let drawing = false;
-  function drawTeams() {
+  // ---------- sorteio equilibrado ----------
+  function strengthOf() {
+    const map = new Map(computeRanking().map((r) => [r.name, r]));
+    // aproveitamento suavizado: quem jogou pouco fica perto de 50%
+    return (p) => { const r = map.get(p); return r ? (r.wins + 1) / (r.games + 2) : 0.5; };
+  }
+  function balancedSplit(pool) {
+    const str = strengthOf();
+    const avg = (arr) => arr.reduce((a, p) => a + str(p), 0) / (arr.length || 1);
+    const tries = [];
+    for (let k = 0; k < 600; k++) {
+      const split = splitTeams(pool);
+      const A = pool.filter((p) => split[p] === 'A'), B = pool.filter((p) => split[p] === 'B');
+      tries.push({ split, diff: Math.abs(avg(A) - avg(B)), a: avg(A), b: avg(B) });
+    }
+    tries.sort((x, y) => x.diff - y.diff);
+    const best = tries[0].diff;
+    const near = tries.filter((t) => t.diff <= best + 0.015).slice(0, 12);
+    return near[Math.floor(Math.random() * near.length)];
+  }
+
+  // ---------- revanche ----------
+  function lastMatch() {
+    return state.matches.reduce((acc, m) => (!acc || Date.parse(m.date) > Date.parse(acc.date) ? m : acc), null);
+  }
+  function rematch() {
     if (drawing) return;
+    const m = lastMatch();
+    if (!m) { Sfx.play('error'); toast('Ainda não há partida registrada para repetir.', { tone: 'warn' }); return; }
+    PLAYERS.forEach((p) => { state.assign[p] = 'bench'; });
+    ['A', 'B'].forEach((t) => m.teams[t].players.forEach((p) => {
+      if (PLAYERS.includes(p)) { state.present[p] = true; state.assign[p] = t; }
+    }));
+    state.teamNames.A = m.teams.A.name;
+    state.teamNames.B = m.teams.B.name;
+    save();
+    renderPresence();
+    renderAllTeams();
+    $('builder').classList.add('is-revealed');
+    setTimeout(() => $('builder').classList.remove('is-revealed'), 700);
+    Sfx.play('rematch');
+    toast(`Revanche! Mesmas equipes do último combate (${m.teams.A.score}×${m.teams.B.score}).`);
+    document.getElementById('placar').scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+  }
+
+  let drawing = false;
+  function drawTeams(mode) {
+    if (drawing) return;
+    const balanced = mode === 'balanced';
     const pool = PLAYERS.filter((p) => state.present[p]);
     if (pool.length < 2) {
+      Sfx.play('error');
       toast('Marque pelo menos 2 jogadores presentes para sortear.', { tone: 'warn' });
       return;
     }
     drawing = true;
     const btn = $('btnDraw');
-    btn.disabled = true;
+    btn.disabled = true; $('btnBalanced').disabled = true; $('btnRematch').disabled = true;
     btn.querySelector('span').textContent = 'Sorteando…';
     $('builder').classList.add('is-drawing');
-    const final = splitTeams(pool);
+    const pick = balanced ? balancedSplit(pool) : null;
+    const final = balanced ? pick.split : splitTeams(pool);
     const steps = reduce ? 0 : 9;
     let i = 0;
     const tick = () => {
       if (i < steps) {
         preview = { ...state.assign, ...splitTeams(pool) };
         renderBuilder();
+        Sfx.play('tick', i);
         i++;
         setTimeout(tick, 70 + i * 12);
         return;
@@ -353,13 +404,17 @@
       $('builder').classList.remove('is-drawing');
       $('builder').classList.add('is-revealed');
       setTimeout(() => $('builder').classList.remove('is-revealed'), 700);
-      btn.disabled = false;
+      btn.disabled = false; $('btnBalanced').disabled = false; $('btnRematch').disabled = !state.matches.length;
       btn.querySelector('span').textContent = 'Sortear de novo';
       drawing = false;
+      Sfx.play('reveal');
       const reserve = pool.filter((p) => final[p] === 'bench');
-      toast(reserve.length
-        ? `Equipes sorteadas! No banco: ${listJoin(reserve)}.`
-        : 'Equipes sorteadas! Bom jogo. 🎮');
+      const bench = reserve.length ? ` No banco: ${listJoin(reserve)}.` : '';
+      if (balanced) {
+        toast(`Equipes equilibradas! Força: ${teamName('A')} ${Math.round(pick.a * 100)}% × ${Math.round(pick.b * 100)}% ${teamName('B')}.${bench}`);
+      } else {
+        toast(reserve.length ? `Equipes sorteadas!${bench}` : 'Equipes sorteadas! Bom jogo. 🎮');
+      }
     };
     tick();
   }
@@ -438,6 +493,7 @@
     if (isNaN(date)) { toast('Data inválida.', { tone: 'warn' }); return; }
 
     const winner = sa > sb ? 'A' : 'B';
+    const badgesBefore = computeBadges();
     const match = {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
       date: date.toISOString(),
@@ -462,6 +518,8 @@
     renderScore();
     flashRow(winner === 'A' ? A : B);
     confetti(winner === 'A' ? ['#ff6a2b', '#ffb547', '#ffd166', '#fff'] : ['#29b6f6', '#8ae6ff', '#ffd166', '#fff']);
+    Sfx.play('win');
+    announceBadges(badgesBefore, computeBadges());
     toast(`🏆 ${match.teams[winner].name} venceu ${Math.max(sa, sb)}×${Math.min(sa, sb)}! +1 para ${listJoin(match.teams[winner].players)}.`);
   }
 
@@ -490,7 +548,91 @@
     return rows;
   }
 
+  // ---------- conquistas ----------
+  const BADGES = [
+    { id: 'estreia', icon: '⭐', name: 'Estreia Vitoriosa', desc: 'Venceu o primeiro combate.' },
+    { id: 'chamas', icon: '🔥', name: 'Em Chamas', desc: '3 vitórias seguidas.' },
+    { id: 'imparavel', icon: '⚡', name: 'Imparável', desc: '5 vitórias seguidas.' },
+    { id: 'atropelo', icon: '💥', name: 'Atropelo', desc: 'Venceu com 5 ou mais de diferença (tipo 6×1).' },
+    { id: 'casal', icon: '💞', name: 'Casal Imbatível', desc: 'Aline e Miguel venceram juntos na mesma equipe.' },
+    { id: 'pregador', icon: '📖', name: 'Pregador', desc: 'Talisson venceu um combate. Romanos 6.23!' },
+    { id: 'grau', icon: '🏍️', name: 'Grau Perfeito', desc: 'Isaac venceu um combate chegando de moto.' },
+    { id: 'adblock', icon: '🚫', name: 'Bloqueador de Anúncios', desc: 'Isaías venceu apesar de tanta propaganda.' },
+    { id: 'veterano', icon: '🎖️', name: 'Veterano', desc: 'Jogou 10 combates.' },
+    { id: 'lenda', icon: '👑', name: 'Lenda da Família', desc: 'Chegou a 10 vitórias.' },
+  ];
+  const BADGE_BY_ID = Object.fromEntries(BADGES.map((b) => [b.id, b]));
+
+  /** Map jogador -> Set de ids desbloqueados, calculado do histórico. */
+  function computeBadges() {
+    const out = new Map();
+    const give = (p, id) => { if (!out.has(p)) out.set(p, new Set()); out.get(p).add(id); };
+    const st = new Map();
+    const ordered = state.matches.slice().sort((a, b) => Date.parse(a.date) - Date.parse(b.date));
+    ordered.forEach((m) => {
+      const w = m.winner, l = w === 'A' ? 'B' : 'A';
+      const winners = m.teams[w].players;
+      const margin = m.teams[w].score - m.teams[l].score;
+      ['A', 'B'].forEach((t) => m.teams[t].players.forEach((p) => {
+        const s = st.get(p) || { wins: 0, games: 0, streak: 0 };
+        s.games++;
+        if (t === w) { s.wins++; s.streak++; } else s.streak = 0;
+        st.set(p, s);
+        if (s.games >= 10) give(p, 'veterano');
+        if (t !== w) return;
+        give(p, 'estreia');
+        if (s.streak >= 3) give(p, 'chamas');
+        if (s.streak >= 5) give(p, 'imparavel');
+        if (s.wins >= 10) give(p, 'lenda');
+        if (margin >= 5) give(p, 'atropelo');
+      }));
+      if (winners.includes('Aline') && winners.includes('Miguel')) { give('Aline', 'casal'); give('Miguel', 'casal'); }
+      if (winners.includes('Talisson')) give('Talisson', 'pregador');
+      if (winners.includes('Isaac')) give('Isaac', 'grau');
+      if (winners.includes('Isaías')) give('Isaías', 'adblock');
+    });
+    return out;
+  }
+
+  function announceBadges(before, after) {
+    const fresh = [];
+    after.forEach((ids, p) => ids.forEach((id) => {
+      if (!(before.get(p) && before.get(p).has(id))) fresh.push({ p, b: BADGE_BY_ID[id] });
+    }));
+    if (!fresh.length) return;
+    const byBadge = new Map();
+    fresh.forEach(({ p, b }) => { if (!byBadge.has(b.id)) byBadge.set(b.id, { b, people: [] }); byBadge.get(b.id).people.push(p); });
+    setTimeout(() => {
+      Sfx.play('badge');
+      byBadge.forEach(({ b, people }) => toast(`${b.icon} Nova conquista: ${b.name} — ${listJoin(people)}!`));
+    }, 900);
+  }
+
+  function renderBadges(badges) {
+    const holders = new Map(BADGES.map((b) => [b.id, []]));
+    badges.forEach((ids, p) => ids.forEach((id) => holders.get(id) && holders.get(id).push(p)));
+    let unlocked = 0;
+    $('badgeList').innerHTML = BADGES.map((b) => {
+      const who = holders.get(b.id).sort((x, y) => x.localeCompare(y, 'pt-BR'));
+      if (who.length) unlocked++;
+      return `
+        <li class="badge-card${who.length ? ' is-on' : ''}">
+          <span class="badge-icon" aria-hidden="true">${b.icon}</span>
+          <div class="badge-info">
+            <p class="badge-name">${esc(b.name)}</p>
+            <p class="badge-desc">${esc(b.desc)}</p>
+            <p class="badge-who">${who.length
+              ? who.map((p) => `<span class="mchip"><img class="avatar" src="${avatar(p, 'N')}" alt="" width="20" height="19">${esc(p)}</span>`).join('')
+              : '<span class="muted">Bloqueada</span>'}</p>
+          </div>
+        </li>`;
+    }).join('');
+    $('badgeCount').textContent = `${unlocked}/${BADGES.length}`;
+  }
+
   function renderRanking(rows) {
+    const badges = computeBadges();
+    renderBadges(badges);
     const max = Math.max(1, ...rows.map((r) => r.wins));
     $('rankingList').innerHTML = rows.map((r) => {
       const medal = r.wins > 0 && r.pos <= 3 ? ` is-top is-top-${r.pos}` : '';
@@ -500,13 +642,18 @@
           <span class="rank-pos">${r.pos === 1 && r.wins > 0 ? ICON.crown : r.pos + 'º'}</span>
           <img class="avatar avatar-lg" src="${avatar(r.name, 'N')}" alt="" width="36" height="33">
           <div class="rank-info">
-            <p class="rank-name">${esc(r.name)} ${streak}</p>
+            <p class="rank-name">${esc(r.name)} ${streak}${badgeIcons(badges.get(r.name))}</p>
             <p class="rank-sub">${r.games} ${r.games === 1 ? 'partida' : 'partidas'}${r.games ? ' · ' + Math.round(r.rate * 100) + '% de aproveitamento' : ''}</p>
             <div class="rank-bar" aria-hidden="true"><span style="width:${(r.wins / max) * 100}%"></span></div>
           </div>
           <div class="rank-wins"><b>${r.wins}</b><span>${r.wins === 1 ? 'vitória' : 'vitórias'}</span></div>
         </li>`;
     }).join('');
+  }
+
+  function badgeIcons(set) {
+    if (!set || !set.size) return '';
+    return `<span class="rank-badges">${BADGES.filter((b) => set.has(b.id)).map((b) => `<span title="${esc(b.name)}: ${esc(b.desc)}" aria-label="${esc(b.name)}">${b.icon}</span>`).join('')}</span>`;
   }
 
   function flashRow(names) {
@@ -630,6 +777,7 @@
     renderFilter();
     renderHistory();
     renderStats(rows);
+    if (!drawing) $('btnRematch').disabled = !state.matches.length;
   }
 
   // ---------- toast ----------
@@ -750,7 +898,18 @@
       move(b.dataset.name, b.dataset.move);
     });
 
-    $('btnDraw').addEventListener('click', drawTeams);
+    $('btnDraw').addEventListener('click', () => drawTeams('random'));
+    $('btnBalanced').addEventListener('click', () => drawTeams('balanced'));
+    $('btnRematch').addEventListener('click', rematch);
+    const snd = $('btnSound');
+    const paintSound = () => {
+      const on = !Sfx.muted;
+      snd.setAttribute('aria-pressed', on);
+      snd.setAttribute('aria-label', on ? 'Som ligado' : 'Som desligado');
+      snd.title = on ? 'Som ligado — clique para silenciar' : 'Som desligado — clique para ligar';
+    };
+    snd.addEventListener('click', () => { Sfx.toggle(); paintSound(); });
+    paintSound();
     $('btnClear').addEventListener('click', () => {
       PLAYERS.forEach((p) => { state.assign[p] = 'bench'; });
       $('btnDraw').querySelector('span').textContent = 'Sortear equipes';
@@ -776,6 +935,7 @@
         const input = $(b.dataset.target);
         input.value = Math.max(0, Math.min(99, scoreVal(b.dataset.target) + Number(b.dataset.step)));
         input.classList.remove('is-tick'); void input.offsetWidth; input.classList.add('is-tick');
+        Sfx.play('click');
         updateHint();
       });
     });

@@ -25,8 +25,13 @@
         <a href="#equipes">Equipes</a>
         <a href="#placar">Placar</a>
         <a href="#ranking">Ranking</a>
+        <a href="#conquistas">Conquistas</a>
         <a href="#historico">Histórico</a>
       </nav>
+      <button class="sound-btn" id="btnSound" type="button" aria-pressed="true" aria-label="Som ligado" title="Som ligado">
+        <svg class="ico-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4zM16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <svg class="ico-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4zM17 10l5 5M22 10l-5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
     </div>
   </header>
 
@@ -58,12 +63,20 @@
         <div>
           <p class="kicker">Passo 1</p>
           <h2 id="equipesTitle">Montar equipes</h2>
-          <p class="sub">Sorteie na sorte ou escale cada jogador manualmente. Máximo de 4 por equipe.</p>
+          <p class="sub">Sorteie na sorte, equilibre pela força do ranking, repita a última partida ou escale cada jogador manualmente. Máximo de 4 por equipe.</p>
         </div>
         <div class="card-actions">
           <button class="btn btn-ghost" id="btnClear" type="button">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.3-5.6M4 4v4h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
             Limpar
+          </button>
+          <button class="btn btn-ghost" id="btnRematch" type="button" title="Repete as equipes da última partida registrada">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 3l4 4-4 4M21 7H8a5 5 0 0 0-5 5M7 21l-4-4 4-4M3 17h13a5 5 0 0 0 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Revanche
+          </button>
+          <button class="btn btn-ghost btn-accent" id="btnBalanced" type="button" title="Monta equipes de força parecida usando o aproveitamento no ranking">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M5 21h14M6 7h12M6 7l-3 7a3 3 0 0 0 6 0zM18 7l-3 7a3 3 0 0 0 6 0z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Sorteio equilibrado
           </button>
           <button class="btn btn-primary" id="btnDraw" type="button">
             <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg>
@@ -172,6 +185,18 @@
       </section>
     </div>
 
+    <!-- CONQUISTAS -->
+    <section class="card" id="conquistas" aria-labelledby="conquistasTitle">
+      <div class="card-head">
+        <div>
+          <p class="kicker">Mural da fama</p>
+          <h2 id="conquistasTitle">Conquistas <span class="count-pill" id="badgeCount">0</span></h2>
+          <p class="sub">Desbloqueadas automaticamente a partir do histórico de combates.</p>
+        </div>
+      </div>
+      <ul class="badges" id="badgeList"></ul>
+    </section>
+
     <!-- HISTÓRICO -->
     <section class="card" id="historico" aria-labelledby="historicoTitle">
       <div class="card-head">
@@ -207,6 +232,7 @@
   <div class="toast-region" id="toastRegion" aria-live="polite" aria-atomic="true"></div>
   <canvas class="confetti" id="confetti" aria-hidden="true"></canvas>
 
+  <script src="js/sound.js"></script>
   <script src="js/sprites.js"></script>
   <script src="js/scene.js"></script>
   <script src="js/firebase-config.js"></script>
