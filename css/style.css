@@ -60,7 +60,7 @@ svg { width: 1em; height: 1em; flex: none; }
 
 /* ---------- topbar ---------- */
 .topbar {
-  position: sticky; top: 0; z-index: 50;
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 50;
   background: rgba(11, 10, 16, .72);
   backdrop-filter: saturate(160%) blur(14px);
   -webkit-backdrop-filter: saturate(160%) blur(14px);
