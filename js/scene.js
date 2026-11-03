@@ -184,7 +184,6 @@
     }
 
     crate(g, 3, 107, 12, 12);
-    crate(g, 305, 107, 12, 12);
     return L;
   }
 
@@ -211,10 +210,10 @@
     { name: 'Aline', x: 54, team: 'A', dir: 1, couple: 'L' },
     { name: 'Miguel', x: 80, team: 'A', dir: 1, couple: 'R' },
     { name: 'Railander', x: 116, team: 'A', dir: 1, shooter: true },
-    { name: 'Benjamin', x: 204, team: 'B', dir: -1, shooter: true },
-    { name: 'Talisson', x: 236, team: 'B', dir: -1, quote: 'Romanos 6.23', hold: 'book', tail: 50 },
-    { name: 'Alesson', x: 266, team: 'B', dir: -1 },
-    { name: 'Isaías', x: 296, team: 'B', dir: -1, quote: 'Tá cheio de propaganda aqui!', hold: 'phone', tail: 84 },
+    { name: 'Benjamin', x: 190, team: 'B', dir: -1, shooter: true },
+    { name: 'Talisson', x: 218, team: 'B', dir: -1, quote: 'Romanos 6.23', hold: 'book', tail: 50 },
+    { name: 'Alesson', x: 246, team: 'B', dir: -1 },
+    { name: 'Isaías', x: 274, team: 'B', dir: -1, quote: 'Tá cheio de propaganda aqui!', hold: 'phone', tail: 80 },
   ];
   cast.forEach((c, i) => {
     c.phase = i * 0.83;
@@ -229,7 +228,12 @@
 
   // ---------- camada HTML (nomes e balões) ----------
   const bubbles = [];
+  let isaacTag = null;
   if (overlay) {
+    isaacTag = document.createElement('span');
+    isaacTag.className = 'tag tag-b tag-isaac';
+    isaacTag.textContent = 'Isaac';
+    overlay.appendChild(isaacTag);
     cast.forEach((c, i) => {
       const tag = document.createElement('span');
       tag.className = 'tag tag-' + c.team.toLowerCase() + (i % 2 ? ' tag-alt' : '');
@@ -457,12 +461,14 @@
     const isaias = cast[7];
     if (isaias.speaking && t - lastAd > 0.5) {
       lastAd = t;
-      ads.push({ x: rand(270, 300), y: rand(88, 104), life: 1.1 });
+      ads.push({ x: rand(252, 280), y: rand(86, 102), life: 1.1 });
     }
     for (let i = ads.length - 1; i >= 0; i--) {
       ads[i].life -= dt;
       if (ads[i].life <= 0) ads.splice(i, 1);
     }
+
+    updateBike(t, dt);
 
     // brasas
     embers.forEach((e) => {
@@ -471,6 +477,163 @@
     });
 
     clouds.forEach((c) => { c.x += c.v * dt; if (c.x > W + 10) c.x = -c.w - 10; });
+  }
+
+  // ---------- Isaac chegando de moto (dando grau) ----------
+  const BIKE_W = 32, BIKE_H = 30, PIVOT_X = 23, PIVOT_Y = 29; // pivô = contato da roda traseira
+  const PARK = 284;            // x (esquerda do sprite) onde ele estaciona
+  const BIKE_CYCLE = 16;
+  const bikeCv = document.createElement('canvas');
+  bikeCv.width = BIKE_W; bikeCv.height = BIKE_H;
+  const bg2 = bikeCv.getContext('2d');
+  const dust = [];
+  let lastDust = 0, lastPuff = 0;
+  const easeOut = (v) => 1 - Math.pow(1 - v, 3);
+
+  function wheel(g, cx, cy, spin) {
+    for (let y = -5; y <= 5; y++) {
+      for (let x = -5; x <= 5; x++) {
+        const d = Math.sqrt(x * x + y * y);
+        if (d <= 4.6 && d >= 3.2) { g.fillStyle = '#15151c'; g.fillRect(cx + x, cy + y, 1, 1); }
+        else if (d < 3.2 && d >= 2.2) { g.fillStyle = '#4a4f5e'; g.fillRect(cx + x, cy + y, 1, 1); }
+      }
+    }
+    g.fillStyle = '#d6dae4';
+    for (let k = 0; k < 2; k++) {
+      const a = spin + k * Math.PI;
+      g.fillRect(cx + Math.round(Math.cos(a) * 2), cy + Math.round(Math.sin(a) * 2), 1, 1);
+      g.fillRect(cx + Math.round(Math.cos(a) * 1), cy + Math.round(Math.sin(a) * 1), 1, 1);
+    }
+    g.fillRect(cx, cy, 1, 1);
+  }
+
+  // desenha moto + Isaac virados para a esquerda no canvas auxiliar
+  function paintBike(spin, blink, revving) {
+    const g = bg2;
+    g.clearRect(0, 0, BIKE_W, BIKE_H);
+    const RED = '#e8453c', RED2 = '#ff7a6b', DARK = '#15151c', CHROME = '#c8ccd8';
+    // escapamento
+    g.fillStyle = CHROME; line(g, 17, 24, 27, 22); line(g, 17, 25, 27, 23);
+    g.fillStyle = revving ? '#ff8a3d' : '#7a7f8e'; g.fillRect(28, 22, 1, 2);
+    // balança traseira e motor
+    g.fillStyle = '#3a3f4f'; line(g, 23, 25, 16, 23);
+    g.fillRect(12, 19, 7, 5);
+    g.fillStyle = '#5b6070'; g.fillRect(13, 20, 5, 1);
+    // tanque / carenagem
+    g.fillStyle = DARK; g.fillRect(8, 15, 14, 5);
+    g.fillStyle = RED; g.fillRect(9, 16, 12, 3);
+    g.fillStyle = RED2; g.fillRect(10, 16, 6, 1);
+    g.fillStyle = '#ffd166'; g.fillRect(13, 18, 4, 1);
+    // banco e paralamas
+    g.fillStyle = DARK; g.fillRect(17, 14, 7, 2);
+    g.fillStyle = RED; g.fillRect(21, 18, 6, 1); g.fillRect(3, 19, 5, 1);
+    // garfo, guidão e farol
+    g.fillStyle = CHROME; line(g, 6, 25, 9, 13); line(g, 7, 25, 10, 13);
+    g.fillStyle = DARK; g.fillRect(8, 12, 4, 1);
+    g.fillStyle = '#ffe27a'; g.fillRect(4, 15, 2, 2);
+    // rodas
+    wheel(g, 6, 25, -spin);
+    wheel(g, 23, 25, -spin);
+
+    // Isaac (cabeça e tronco do sprite, virado para a esquerda)
+    const px = S.build('Isaac', { team: 'B', hold: 'none', blink });
+    const top = 4, left = 13;
+    for (let i = 0; i < px.length; i++) {
+      const p = px[i];
+      if (p[1] > 12) continue;
+      g.fillStyle = p[2];
+      g.fillRect(left + (11 - p[0]), top + p[1], 1, 1);
+    }
+    // braço até o guidão, perna até a pedaleira
+    const T = S.TEAMS.B, skin = S.CHARS.Isaac.skin;
+    g.fillStyle = '#1a1020'; g.fillRect(10, 15, 6, 1);
+    g.fillStyle = T.T; g.fillRect(12, 14, 4, 1);
+    g.fillStyle = skin; g.fillRect(10, 13, 2, 2);
+    g.fillStyle = T.P; g.fillRect(17, 16, 4, 2); g.fillRect(16, 18, 3, 4);
+    g.fillStyle = '#2a1d14'; g.fillRect(14, 22, 4, 1);
+  }
+
+  function bikeState(t) {
+    const it = (t + 14.6) % BIKE_CYCLE; // primeira chegada logo após abrir a página
+    let x = W + 40, angle = 0, faceRight = false, moving = false, bounce = 0, revving = false, visible = true;
+    if (it < 1.2) visible = false;
+    else if (it < 3.4) { // chega empinando
+      const k = (it - 1.2) / 2.2;
+      x = W + 36 + (PARK - W - 36) * easeOut(k);
+      angle = 0.42 + Math.sin(it * 9) * 0.04;
+      moving = true; revving = true;
+    } else if (it < 3.75) { // roda da frente desce
+      const k = (it - 3.4) / 0.35;
+      x = PARK; angle = 0.42 * (1 - easeOut(k));
+      if (k > 0.8) bounce = 1;
+    } else if (it < 7.4) { x = PARK; }
+    else if (it < 9.4) { // grau parado, acelerando
+      const k = (it - 7.4) / 2;
+      x = PARK; revving = true;
+      angle = k < 0.25 ? 0.5 * easeOut(k / 0.25) : k < 0.8 ? 0.5 + Math.sin(it * 10) * 0.05 : 0.5 * (1 - easeOut((k - 0.8) / 0.2));
+    } else if (it < 13) { x = PARK; }
+    else if (it < 13.3) { x = PARK; faceRight = true; }
+    else if (it < 15.2) { // sai empinando
+      const k = (it - 13.3) / 1.9;
+      x = PARK + (W + 40 - PARK) * (k * k);
+      angle = 0.45 + Math.sin(it * 9) * 0.04;
+      faceRight = true; moving = true; revving = true;
+    } else visible = false;
+    return { x: Math.round(x), angle, faceRight, moving, bounce, revving, visible, it };
+  }
+
+  function updateBike(t, dt) {
+    const b = bikeState(t);
+    if (b.visible && !reduce) {
+      const rearX = b.faceRight ? b.x + (BIKE_W - PIVOT_X) : b.x + PIVOT_X;
+      if ((b.moving || b.angle > 0.2) && t - lastDust > 0.04) {
+        lastDust = t;
+        const back = b.faceRight ? -1 : 1;
+        dust.push({ x: rearX + back * 2, y: FEET - 1, vx: back * rand(10, 40), vy: rand(-22, -6), life: 0.7, max: 0.7, c: rand(0, 1) > 0.5 ? '#a07a52' : '#c49a6c' });
+      }
+      if (b.revving && t - lastPuff > 0.09) {
+        lastPuff = t;
+        const ex = b.faceRight ? b.x + (BIKE_W - 29) : b.x + 29;
+        dust.push({ x: ex, y: FEET - 8 - b.angle * 10, vx: (b.faceRight ? -1 : 1) * rand(8, 20), vy: rand(-10, -3), life: 0.9, max: 0.9, c: '#9a93ae', puff: true });
+      }
+    }
+    for (let i = dust.length - 1; i >= 0; i--) {
+      const d = dust[i];
+      d.life -= dt; d.x += d.vx * dt; d.y += d.vy * dt; d.vy += (d.puff ? -4 : 50) * dt;
+      if (d.life <= 0) dust.splice(i, 1);
+    }
+  }
+
+  function drawBike(t) {
+    const b = bikeState(t);
+    dust.forEach((d) => {
+      const k = 1 - d.life / d.max;
+      const size = d.puff ? 1 + Math.round(k * 3) : 1;
+      ctx.globalAlpha = Math.max(0, 0.8 * (1 - k));
+      ctx.fillStyle = d.c;
+      ctx.fillRect(Math.round(d.x), Math.round(d.y), size, size);
+    });
+    ctx.globalAlpha = 1;
+    if (isaacTag) {
+      const cx = b.x + (b.faceRight ? BIKE_W - 18 : 18);
+      isaacTag.style.left = (cx / W) * 100 + '%';
+      isaacTag.classList.toggle('is-hidden', !b.visible || b.x > W - 14);
+    }
+    if (!b.visible) return;
+    const spin = b.moving || b.revving ? t * 22 : 0;
+    const idleShake = !b.moving && b.angle === 0 && Math.floor(t * 12) % 2 ? 1 : 0;
+    paintBike(spin, (t % 3.7) < 0.12, b.revving);
+    // sombra
+    ctx.fillStyle = 'rgba(0,0,0,.35)';
+    ctx.fillRect(b.x + 3, FEET, 26, 1);
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    const px = b.faceRight ? b.x + (BIKE_W - PIVOT_X) : b.x + PIVOT_X;
+    ctx.translate(px, FEET + 1 + b.bounce - idleShake);
+    if (b.faceRight) ctx.scale(-1, 1);
+    ctx.rotate(b.angle);
+    ctx.drawImage(bikeCv, -PIVOT_X, -PIVOT_Y);
+    ctx.restore();
   }
 
   // ---------- render ----------
@@ -522,6 +685,8 @@
       ctx.fillRect(x - 5, FEET, 10, 1);
       S.draw(ctx, pixels, x - 6 + recoil, FEET - 17 + bob, dir < 0);
     });
+
+    drawBike(t);
 
     sparks.forEach((s) => {
       ctx.fillStyle = s.life > 0.15 ? '#fff6c2' : '#ff8a3d';
