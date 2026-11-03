@@ -87,7 +87,7 @@
     Railander: { style: 'short',  hair: '#17110d', skin: '#b97a4f', bandana: '#e23b3b' },
     Iago:      { style: 'cap',    hair: '#3a2416', skin: '#d79a6a', cap: '#e04848' },
     Alesson:   { style: 'short',  hair: '#1a1410', skin: '#c48a5c', shades: true },
-    Benjamin:  { style: 'beanie', hair: '#4a2c18', skin: '#e3b088', cap: '#ffd166' },
+    Benjamin:  { style: 'short',  hair: '#141010', skin: '#e3b088' },
     Talisson:  { style: 'short',  hair: '#24180f', skin: '#b07548' },
     'Isaías':  { style: 'spiky',  hair: '#2a1a12', skin: '#d29a6c' },
     Isaac:     { style: 'afro',   hair: '#1e140d', skin: '#a86b42' },
