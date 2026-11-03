@@ -11,11 +11,56 @@
     if (!ctx) {
       const AC = global.AudioContext || global.webkitAudioContext;
       if (!AC) return null;
-      ctx = new AC();
+      try { ctx = new AC(); } catch (e) { return null; }
     }
-    if (ctx.state === 'suspended') ctx.resume();
     return ctx;
   }
+
+  // ---- desbloqueio do áudio no celular ----
+  // Navegadores de celular só liberam som depois de um toque, e o iPhone no modo
+  // silencioso cala o Web Audio. Um <audio> mudo em loop muda a sessão para "reprodução".
+  function silentWav() {
+    const rate = 8000, n = 2000; // 0,25 s
+    const buf = new Uint8Array(44 + n);
+    const dv = new DataView(buf.buffer);
+    const str = (o, t) => { for (let i = 0; i < t.length; i++) buf[o + i] = t.charCodeAt(i); };
+    str(0, 'RIFF'); dv.setUint32(4, 36 + n, true); str(8, 'WAVE'); str(12, 'fmt ');
+    dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true);
+    dv.setUint32(24, rate, true); dv.setUint32(28, rate, true); dv.setUint16(32, 1, true); dv.setUint16(34, 8, true);
+    str(36, 'data'); dv.setUint32(40, n, true);
+    buf.fill(128, 44);
+    let bin = '';
+    buf.forEach((b) => { bin += String.fromCharCode(b); });
+    return 'data:audio/wav;base64,' + btoa(bin);
+  }
+  let keepAlive = null;
+  function unlock() {
+    if (muted) return;
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* sem suporte */ }
+    if (!keepAlive) {
+      keepAlive = document.createElement('audio');
+      keepAlive.setAttribute('x-webkit-airplay', 'deny');
+      keepAlive.preload = 'auto';
+      keepAlive.loop = true;
+      keepAlive.src = silentWav();
+    }
+    if (keepAlive.paused && !document.hidden) keepAlive.play().catch(() => { /* tenta no próximo toque */ });
+    const a = ac();
+    if (!a) return;
+    if (a.state !== 'running') a.resume().catch(() => {});
+    try {
+      const b = a.createBuffer(1, 1, 22050);
+      const src = a.createBufferSource();
+      src.buffer = b; src.connect(a.destination); src.start(0);
+    } catch (e) { /* ignore */ }
+  }
+  ['pointerdown', 'touchstart', 'touchend', 'click', 'keydown'].forEach((ev) =>
+    document.addEventListener(ev, unlock, { capture: true, passive: true }));
+  document.addEventListener('visibilitychange', () => {
+    if (!keepAlive) return;
+    if (document.hidden) keepAlive.pause();
+    else if (!muted) keepAlive.play().catch(() => {});
+  });
 
   // uma nota de onda quadrada/triangular com envelope curto
   function note(freq, start, dur, opts = {}) {
@@ -68,13 +113,18 @@
   global.Sfx = {
     play(name, arg) {
       if (muted || !SOUNDS[name]) return;
-      try { SOUNDS[name](arg); } catch (e) { /* áudio indisponível */ }
+      const a = ac();
+      if (!a) return;
+      const run = () => { try { SOUNDS[name](arg); } catch (e) { /* áudio indisponível */ } };
+      if (a.state === 'running') run();
+      else a.resume().then(run).catch(() => {});
     },
     get muted() { return muted; },
     toggle() {
       muted = !muted;
       try { localStorage.setItem(KEY, muted ? '1' : '0'); } catch (e) { /* ignore */ }
-      if (!muted) SOUNDS.click();
+      if (muted) { if (keepAlive) keepAlive.pause(); }
+      else { unlock(); global.Sfx.play('click'); }
       return muted;
     },
   };
