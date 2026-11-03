@@ -86,7 +86,11 @@
     await db.collection('matches').doc(id).delete();
   }
   function writeFailed(e) {
-    if (e && e.code === 'invalid_argument') {
+    if (e && e.code === 'permission-denied') {
+      readOnly = true;
+      applyReadOnly();
+      toast('Só a conta autorizada pode registrar. Entre com ela para salvar o placar.', { tone: 'warn' });
+    } else if (e && e.code === 'invalid_argument') {
       readOnly = true;
       applyReadOnly();
       toast('Você só pode visualizar este placar. Peça acesso de colaborador ao dono da página.', { tone: 'warn' });
@@ -102,12 +106,23 @@
     setSync(syncState);
   }
 
+  // ---- conexão: 1) banco do Claude (link do claude.ai) 2) Firebase (GitHub Pages) ----
+  let localMatches = [];
+  let migrated = false, liveOnce = false;
+  let fbAuth = null, fbUser = null, fbAdmins = [];
+
   async function connectShared() {
+    localMatches = state.matches.slice();
+    if (await connectClaude()) return;
+    await connectFirebase();
+  }
+
+  async function connectClaude() {
     const c = window.claude;
-    if (!c || typeof c.use !== 'function') return;
+    if (!c || typeof c.use !== 'function') return false;
     let ns = null;
     try { ns = await c.use('db'); } catch (e) { ns = null; }
-    if (!ns) return;
+    if (!ns) return false;
     db = ns;
     try {
       const user = await c.use('user');
@@ -116,37 +131,98 @@
         if (can === false) readOnly = true;
       }
     } catch (e) { /* sem informação: tenta escrever e trata a recusa */ }
+    startSync();
+    return true;
+  }
 
-    const localMatches = state.matches.slice();
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      const el = document.createElement('script');
+      el.src = src; el.onload = resolve; el.onerror = reject;
+      document.head.appendChild(el);
+    });
+  }
+
+  async function connectFirebase() {
+    const cfg = window.FREE_FAMILIA_FIREBASE;
+    if (!cfg || !cfg.config || !cfg.config.projectId) return false;
+    setSync('loading');
+    try {
+      const v = '10.12.2';
+      await loadScript(`https://www.gstatic.com/firebasejs/${v}/firebase-app-compat.js`);
+      await Promise.all([
+        loadScript(`https://www.gstatic.com/firebasejs/${v}/firebase-firestore-compat.js`),
+        loadScript(`https://www.gstatic.com/firebasejs/${v}/firebase-auth-compat.js`),
+      ]);
+    } catch (e) {
+      setSync('error');
+      return false;
+    }
+    const fb = window.firebase;
+    fb.initializeApp(cfg.config);
+    db = fb.firestore();
+    fbAuth = fb.auth();
+    fbAdmins = (cfg.admins || []).map((x) => String(x).toLowerCase());
+    readOnly = true;
+    const btn = $('btnAuth');
+    btn.hidden = false;
+    btn.addEventListener('click', async () => {
+      try {
+        if (fbUser) await fbAuth.signOut();
+        else await fbAuth.signInWithPopup(new fb.auth.GoogleAuthProvider());
+      } catch (e) {
+        if (e && e.code !== 'auth/popup-closed-by-user' && e.code !== 'auth/cancelled-popup-request') {
+          toast('Não consegui entrar com o Google. Tente de novo.', { tone: 'warn' });
+        }
+      }
+    });
+    fbAuth.onAuthStateChanged((u) => {
+      fbUser = u;
+      const email = (u && u.email ? u.email : '').toLowerCase();
+      const allowed = !!u && (!fbAdmins.length || fbAdmins.includes(email));
+      readOnly = !allowed;
+      btn.textContent = u ? 'Sair' : 'Entrar para registrar';
+      btn.title = u ? `Conectado como ${u.email}` : 'Entrar com Google para registrar partidas';
+      if (u && !allowed) toast(`${u.email} pode ver o placar, mas não registrar.`, { tone: 'warn' });
+      applyReadOnly();
+      tryMigrate();
+    });
+    startSync();
+    return true;
+  }
+
+  function tryMigrate() {
+    if (migrated || !liveOnce || readOnly) return;
+    migrated = true;
+    // leva para o placar online as partidas que estavam só neste aparelho
+    const ids = new Set(state.matches.map((m) => m.id));
+    const pending = localMatches.filter((m) => !ids.has(m.id));
+    save();
+    if (!pending.length) return;
+    (async () => {
+      try {
+        for (const m of pending) await writeMatch(m);
+        toast(`${pending.length} combate(s) deste aparelho enviados para o placar online.`);
+      } catch (e) { writeFailed(e); }
+    })();
+  }
+
+  function startSync() {
     shared = true;
     setSync('loading');
     applyReadOnly();
-    let migrated = false;
     const timer = setTimeout(() => { if (syncState === 'loading') setSync('stale'); }, 10000);
-
     db.collection('matches').onSnapshot((snap) => {
       state.matches = snap.docs.map((d) => d.data()).filter(validMatch).map((m) => JSON.parse(JSON.stringify(m)));
       renderData();
       if (!snap.metadata.fromCache) {
         clearTimeout(timer);
+        liveOnce = true;
         setSync('live');
-        if (!migrated) {
-          migrated = true;
-          // leva para o placar online as partidas que estavam só neste aparelho
-          const ids = new Set(state.matches.map((m) => m.id));
-          const pending = localMatches.filter((m) => !ids.has(m.id));
-          if (pending.length && !readOnly) {
-            (async () => {
-              try {
-                for (const m of pending) await writeMatch(m);
-                toast(`${pending.length} combate(s) deste aparelho enviados para o placar online.`);
-              } catch (e) { writeFailed(e); }
-            })();
-          }
-          save();
-        }
+        save();
+        tryMigrate();
       }
-    }, (e) => {
+    }, () => {
       clearTimeout(timer);
       setSync('error');
     });
@@ -323,7 +399,9 @@
     form.classList.toggle('lead-b', sb > sa);
     hint.className = 'hint';
     if (readOnly) {
-      hint.textContent = 'Você está vendo o placar em modo leitura.';
+      hint.textContent = fbAuth
+        ? 'Toque em "Entrar para registrar" (no histórico) com a conta autorizada para salvar partidas.'
+        : 'Você está vendo o placar em modo leitura.';
       btn.disabled = true;
       return;
     }

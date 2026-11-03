@@ -1,0 +1,27 @@
+rules_version = '2';
+// Regras do placar Free Família:
+// - qualquer pessoa lê o histórico (o ranking é calculado a partir dele)
+// - só os e-mails listados registram ou apagam partidas
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email.lower() in ['seu-email@gmail.com'];
+    }
+    match /matches/{matchId} {
+      allow read: if true;
+      allow create, update: if isAdmin()
+        && request.resource.data.id == matchId
+        && request.resource.data.winner in ['A', 'B']
+        && request.resource.data.teams.A.players is list
+        && request.resource.data.teams.B.players is list
+        && request.resource.data.teams.A.players.size() <= 4
+        && request.resource.data.teams.B.players.size() <= 4;
+      allow delete: if isAdmin();
+    }
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

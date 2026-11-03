@@ -18,3 +18,22 @@ Abra o `index.html` no navegador. Para publicar, ative o GitHub Pages
 
 Arquivos: `index.html`, `css/style.css`, `js/sprites.js` (personagens — edite `CHARS` para mudar pele, cabelo e acessórios),
 `js/scene.js` (animação), `js/app.js` (equipes, placar, ranking, histórico).
+
+## Placar online no GitHub Pages (Firebase)
+
+Com o Firebase ligado, qualquer pessoa que abrir a página vê o mesmo histórico e ranking, sem login.
+Só os e-mails autorizados registram ou apagam partidas (botão **Entrar para registrar**, no histórico).
+
+1. **Repositório público + GitHub Pages**: em *Settings → General → Danger Zone*, torne o repositório público
+   (GitHub Pages gratuito não funciona em repositório privado). Depois, em *Settings → Pages*, escolha
+   *Deploy from a branch* e a branch com a página, pasta `/ (root)`.
+   O endereço fica `https://free-familia.github.io/free-familia/`.
+2. **Projeto Firebase** (gratuito): em https://console.firebase.google.com crie um projeto.
+   - *Build → Firestore Database → Criar banco* (modo produção).
+   - *Build → Authentication → Método de login → Google → Ativar*.
+   - *Authentication → Configurações → Domínios autorizados → Adicionar* `free-familia.github.io`.
+   - *Configurações do projeto → Seus apps → Web (</>)*: registre o app e copie o objeto `firebaseConfig`.
+3. **Regras**: em *Firestore → Regras*, cole o conteúdo de `firestore.rules`, troque `seu-email@gmail.com`
+   pelo(s) e-mail(s) que podem registrar e clique em *Publicar*.
+4. **Configuração da página**: preencha `js/firebase-config.js` com o `firebaseConfig` e a lista `admins`
+   (os mesmos e-mails das regras).
