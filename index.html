@@ -181,6 +181,7 @@
           <p class="sub">Cada duelo com data, hora, placar e quem estava em cada equipe.</p>
         </div>
         <div class="card-actions">
+          <p class="sync is-local" id="syncStatus" role="status"><i aria-hidden="true"></i><span>Salvo só neste aparelho</span></p>
           <label class="select">
             <span class="sr-only">Filtrar por jogador</span>
             <select id="historyFilter"><option value="">Todos os jogadores</option></select>
@@ -193,7 +194,7 @@
 
   <footer class="footer">
     <div class="footer-inner">
-      <p>Os dados ficam salvos neste navegador. Faça um backup para levar para outro aparelho.</p>
+      <p id="footerNote">Os dados ficam salvos neste navegador. Faça um backup para levar para outro aparelho.</p>
       <div class="footer-actions">
         <button class="btn btn-ghost btn-sm" id="btnExport" type="button">Exportar backup</button>
         <label class="btn btn-ghost btn-sm" for="fileImport">Importar backup</label>

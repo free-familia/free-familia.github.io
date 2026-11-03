@@ -36,7 +36,11 @@
     }
   }
   function save() {
-    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* armazenamento indisponível */ }
+    try {
+      // no modo compartilhado as partidas vivem no banco online; aqui fica só a preferência local
+      const data = shared ? { ...state, matches: [] } : state;
+      localStorage.setItem(KEY, JSON.stringify(data));
+    } catch (e) { /* armazenamento indisponível */ }
   }
   function validMatch(m) {
     return m && typeof m.id === 'string' && !isNaN(Date.parse(m.date)) &&
@@ -46,6 +50,107 @@
   }
 
   let state = load();
+
+  // ---------- sincronização online (artifact db) ----------
+  let db = null;          // namespace do banco compartilhado, quando disponível
+  let shared = false;     // true quando as partidas vêm do banco online
+  let readOnly = false;   // visitante sem permissão de escrita
+  let syncState = 'local'; // local | loading | live | stale | error
+
+  function setSync(s) {
+    syncState = s;
+    const el = $('syncStatus');
+    if (!el) return;
+    const map = {
+      local: ['Salvo só neste aparelho', 'is-local'],
+      loading: ['Conectando ao placar online…', 'is-loading'],
+      live: [readOnly ? 'Ao vivo · somente leitura' : 'Ao vivo · todos veem', 'is-live'],
+      stale: ['Placar online demorando a responder', 'is-stale'],
+      error: ['Placar online indisponível', 'is-stale'],
+    };
+    const [txt, cls] = map[s];
+    el.className = 'sync ' + cls;
+    el.querySelector('span').textContent = txt;
+    const note = $('footerNote');
+    if (note) note.textContent = shared
+      ? 'Os combates ficam salvos online: todo mundo que abre esta página vê o mesmo histórico e ranking.'
+      : 'Os dados ficam salvos neste navegador. Faça um backup para levar para outro aparelho.';
+  }
+
+  async function writeMatch(m) {
+    if (!shared) return;
+    await db.collection('matches').doc(m.id).set(JSON.parse(JSON.stringify(m)));
+  }
+  async function deleteMatchRemote(id) {
+    if (!shared) return;
+    await db.collection('matches').doc(id).delete();
+  }
+  function writeFailed(e) {
+    if (e && e.code === 'invalid_argument') {
+      readOnly = true;
+      applyReadOnly();
+      toast('Você só pode visualizar este placar. Peça acesso de colaborador ao dono da página.', { tone: 'warn' });
+    } else if (e && e.code === 'quota_exceeded') {
+      toast('O placar online está cheio. Apague combates antigos para registrar novos.', { tone: 'warn' });
+    } else {
+      toast('Não consegui salvar online. Confira a conexão e tente de novo.', { tone: 'warn' });
+    }
+  }
+  function applyReadOnly() {
+    document.body.classList.toggle('is-readonly', readOnly);
+    updateHint();
+    setSync(syncState);
+  }
+
+  async function connectShared() {
+    const c = window.claude;
+    if (!c || typeof c.use !== 'function') return;
+    let ns = null;
+    try { ns = await c.use('db'); } catch (e) { ns = null; }
+    if (!ns) return;
+    db = ns;
+    try {
+      const user = await c.use('user');
+      if (user && typeof user.can === 'function') {
+        const can = await user.can('data.write');
+        if (can === false) readOnly = true;
+      }
+    } catch (e) { /* sem informação: tenta escrever e trata a recusa */ }
+
+    const localMatches = state.matches.slice();
+    shared = true;
+    setSync('loading');
+    applyReadOnly();
+    let migrated = false;
+    const timer = setTimeout(() => { if (syncState === 'loading') setSync('stale'); }, 10000);
+
+    db.collection('matches').onSnapshot((snap) => {
+      state.matches = snap.docs.map((d) => d.data()).filter(validMatch).map((m) => JSON.parse(JSON.stringify(m)));
+      renderData();
+      if (!snap.metadata.fromCache) {
+        clearTimeout(timer);
+        setSync('live');
+        if (!migrated) {
+          migrated = true;
+          // leva para o placar online as partidas que estavam só neste aparelho
+          const ids = new Set(state.matches.map((m) => m.id));
+          const pending = localMatches.filter((m) => !ids.has(m.id));
+          if (pending.length && !readOnly) {
+            (async () => {
+              try {
+                for (const m of pending) await writeMatch(m);
+                toast(`${pending.length} combate(s) deste aparelho enviados para o placar online.`);
+              } catch (e) { writeFailed(e); }
+            })();
+          }
+          save();
+        }
+      }
+    }, (e) => {
+      clearTimeout(timer);
+      setSync('error');
+    });
+  }
   let preview = null; // atribuição temporária durante a animação do sorteio
 
   const assignOf = (p) => (preview ? preview[p] : state.assign[p]);
@@ -217,6 +322,11 @@
     form.classList.toggle('lead-a', sa > sb);
     form.classList.toggle('lead-b', sb > sa);
     hint.className = 'hint';
+    if (readOnly) {
+      hint.textContent = 'Você está vendo o placar em modo leitura.';
+      btn.disabled = true;
+      return;
+    }
     if (!A.length || !B.length) {
       hint.textContent = 'Monte as duas equipes no passo 1 para registrar.';
       btn.disabled = true;
@@ -239,6 +349,7 @@
     const A = teamPlayers('A'), B = teamPlayers('B');
     const sa = scoreVal('scoreA'), sb = scoreVal('scoreB');
     if (!A.length || !B.length) return;
+    if (readOnly) { toast('Você só pode visualizar este placar.', { tone: 'warn' }); return; }
     if (sa === sb) {
       toast('Empate não pontua. Confira o placar final.', { tone: 'warn' });
       $('scoreA').focus();
@@ -260,6 +371,11 @@
     };
     state.matches.push(match);
     save();
+    writeMatch(match).catch((err) => {
+      state.matches = state.matches.filter((m) => m.id !== match.id);
+      renderData();
+      writeFailed(err);
+    });
     $('scoreA').value = 0;
     $('scoreB').value = 0;
     dateTouched = false;
@@ -393,11 +509,19 @@
   function removeMatch(id) {
     const idx = state.matches.findIndex((m) => m.id === id);
     if (idx < 0) return;
+    if (readOnly) return;
     const [removed] = state.matches.splice(idx, 1);
     save();
     renderData();
+    deleteMatchRemote(id).catch((err) => { state.matches.push(removed); renderData(); writeFailed(err); });
     toast('Combate apagado.', {
-      action: { label: 'Desfazer', fn: () => { state.matches.push(removed); save(); renderData(); } },
+      action: {
+        label: 'Desfazer',
+        fn: () => {
+          state.matches.push(removed); save(); renderData();
+          writeMatch(removed).catch(writeFailed);
+        },
+      },
     });
   }
 
@@ -513,6 +637,10 @@
         const ids = new Set(state.matches.map((m) => m.id));
         const fresh = incoming.filter((m) => !ids.has(m.id));
         state.matches.push(...fresh);
+        if (shared) {
+          if (readOnly) throw new Error('readonly');
+          (async () => { try { for (const m of fresh) await writeMatch(m); } catch (err) { writeFailed(err); } })();
+        }
         if (data.teamNames) state.teamNames = { ...state.teamNames, ...data.teamNames };
         save();
         renderAllTeams();
@@ -597,7 +725,12 @@
     });
 
     window.addEventListener('storage', (e) => {
-      if (e.key === KEY) { state = load(); renderPresence(); renderAllTeams(); renderData(); }
+      if (e.key === KEY) {
+        const keep = state.matches;
+        state = load();
+        if (shared) state.matches = keep;
+        renderPresence(); renderAllTeams(); renderData();
+      }
     });
   }
 
@@ -607,5 +740,7 @@
   renderAllTeams();
   renderData();
   bind();
+  setSync('local');
+  connectShared();
   setInterval(() => renderStats(computeRanking()), 60000);
 })();

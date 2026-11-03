@@ -456,6 +456,21 @@ svg { width: 1em; height: 1em; flex: none; }
 .empty-state p { margin: 4px 0; }
 .empty-icon { display: inline-grid; place-items: center; width: 52px; height: 52px; border-radius: 14px; background: var(--surface-2); color: var(--gold); font-size: 26px; margin-bottom: 8px; }
 
+/* ---------- sync status ---------- */
+.card-actions { align-items: center; }
+.sync {
+  margin: 0; display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 12px;
+  border-radius: 10px; font-size: 13px; font-weight: 600; color: var(--muted);
+  background: var(--surface-2); border: 1px solid var(--line-2);
+}
+.sync i { width: 8px; height: 8px; border-radius: 2px; background: var(--faint); }
+.sync.is-live { color: var(--text); border-color: rgba(61, 220, 151, .4); }
+.sync.is-live i { background: var(--ok); box-shadow: 0 0 10px var(--ok); animation: blink 1.6s steps(2) infinite; }
+.sync.is-loading i { background: var(--gold); animation: blink .8s steps(2) infinite; }
+.sync.is-stale { color: var(--warn); border-color: rgba(255, 181, 71, .4); }
+.sync.is-stale i { background: var(--warn); }
+.is-readonly .icon-btn[data-delete] { display: none; }
+
 /* ---------- footer ---------- */
 .footer { border-top: 1px solid var(--line); }
 .footer-inner {
