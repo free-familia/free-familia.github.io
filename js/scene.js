@@ -217,15 +217,6 @@
   const bubbles = [];
   let isaacTag = null;
 
-  // legenda com os nomes, usada no celular (onde as etiquetas na cena ficam pequenas demais)
-  const roster = document.getElementById('roster');
-  if (roster) {
-    const chip = (name, team) =>
-      `<span class="roster-chip roster-${team.toLowerCase()}"><img src="${S.avatarURL(name, team)}" alt="" width="18" height="17">${name}</span>`;
-    const left = cast.filter((c) => c.team === 'A').map((c) => chip(c.name, 'A')).join('');
-    const right = cast.filter((c) => c.team === 'B').map((c) => chip(c.name, 'B')).join('') + chip('Isaac', 'B');
-    roster.innerHTML = `<div class="roster-side">${left}</div><span class="roster-vs">VS</span><div class="roster-side">${right}</div>`;
-  }
   if (overlay) {
     isaacTag = document.createElement('span');
     isaacTag.className = 'tag tag-b tag-isaac';
