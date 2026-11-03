@@ -1,4 +1,4 @@
-# Free Família · Arena de Duelos
+# Jogatina Família · Arena de Duelos
 
 Página para registrar os duelos de Free Fire da família.
 
