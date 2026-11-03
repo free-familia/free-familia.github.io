@@ -557,6 +557,9 @@ svg { width: 1em; height: 1em; flex: none; }
   #btnBalanced, #btnDraw { grid-column: 1 / -1; }
   .builder-next { display: grid; grid-template-columns: 1fr; }
   .builder-next .btn { width: 100%; }
+  .presence-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .presence-chip { width: 100%; min-width: 0; }
+  .presence-chip span:not(.check) { flex: 1; min-width: 0; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
 
 /* ---------- som ---------- */
