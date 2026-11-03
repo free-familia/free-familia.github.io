@@ -12,6 +12,7 @@ Página para registrar os duelos de Free Fire da família.
 - **Sorteio equilibrado**: monta equipes de força parecida pelo aproveitamento no ranking.
 - **Revanche**: repete as equipes da última partida registrada.
 - **Conquistas**: Casal Imbatível, Em Chamas, Pregador, Grau Perfeito e outras, calculadas do histórico.
+- **Compartilhar equipes**: gera uma imagem com as equipes sorteadas e envia pelo WhatsApp.
 - **Sons 8-bit** no sorteio, na vitória e nas conquistas, com botão de mudo no topo.
 - **Backup**: exportar/importar JSON (os dados ficam salvos no navegador — `localStorage`).
 

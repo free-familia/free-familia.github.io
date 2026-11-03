@@ -966,6 +966,70 @@
     });
   }
 
+  // ---------- compartilhar equipes (imagem para o WhatsApp) ----------
+  let shareBlob = null, shareText = '', shareUrl = null;
+  async function openShare() {
+    const A = teamPlayers('A'), B = teamPlayers('B');
+    if (!A.length || !B.length) {
+      Sfx.play('error');
+      toast('Monte ou sorteie as duas equipes antes de compartilhar.', { tone: 'warn' });
+      return;
+    }
+    const bench = teamPlayers('bench');
+    const date = cap(new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit' }).format(new Date()));
+    const site = /^https?:/.test(location.protocol) ? location.host : '';
+    const btn = $('btnShare');
+    btn.disabled = true;
+    try {
+      shareBlob = await window.ShareCard.render({ nameA: teamName('A'), nameB: teamName('B'), A, B, bench, date, site });
+    } finally { btn.disabled = false; }
+    if (!shareBlob) { toast('Não consegui gerar a imagem. Tente de novo.', { tone: 'warn' }); return; }
+    shareText = `⚔️ Jogatina Família — equipes do próximo combate\n` +
+      `🔥 ${teamName('A')}: ${A.join(', ')}\n` +
+      `❄️ ${teamName('B')}: ${B.join(', ')}` +
+      (bench.length ? `\n🪑 Banco: ${bench.join(', ')}` : '') +
+      (site ? `\n${location.origin}${location.pathname}` : '');
+    if (shareUrl) URL.revokeObjectURL(shareUrl);
+    shareUrl = URL.createObjectURL(shareBlob);
+    $('sharePreview').src = shareUrl;
+    const file = new File([shareBlob], 'equipes.png', { type: 'image/png' });
+    const canFiles = !!(navigator.canShare && navigator.canShare({ files: [file] }));
+    $('shareHelp').textContent = canFiles
+      ? 'Toque em "Enviar no WhatsApp" e escolha o WhatsApp e o grupo.'
+      : 'Neste aparelho, baixe a imagem e anexe no grupo. O botão verde abre o WhatsApp com a lista em texto.';
+    $('shareDialog').showModal();
+    Sfx.play('click');
+  }
+  async function sendShare() {
+    if (!shareBlob) return;
+    const file = new File([shareBlob], 'equipes.png', { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], text: shareText });
+        $('shareDialog').close();
+        return;
+      } catch (e) {
+        if (e && e.name === 'AbortError') return;
+      }
+    }
+    window.open('https://wa.me/?text=' + encodeURIComponent(shareText), '_blank', 'noopener');
+  }
+  function downloadShare() {
+    if (!shareUrl) return;
+    const a = document.createElement('a');
+    a.href = shareUrl;
+    a.download = `equipes-${new Date().toISOString().slice(0, 10)}.png`;
+    document.body.appendChild(a); a.click(); a.remove();
+    toast('Imagem salva. É só anexar no grupo do WhatsApp.');
+  }
+  function bindShare() {
+    $('btnShare').addEventListener('click', openShare);
+    $('shareSend').addEventListener('click', sendShare);
+    $('shareDownload').addEventListener('click', downloadShare);
+    $('shareClose').addEventListener('click', () => $('shareDialog').close());
+    $('shareDialog').addEventListener('click', (e) => { if (e.target === $('shareDialog')) $('shareDialog').close(); });
+  }
+
   // ---------- páginas e menu lateral ----------
   const ROUTES = ['inicio', 'placar', 'ranking', 'conquistas', 'historico'];
   function openMenu() {
@@ -1010,6 +1074,7 @@
   renderData();
   bind();
   bindMenu();
+  bindShare();
   setSync('local');
   connectShared();
   setInterval(() => renderStats(computeRanking()), 60000);

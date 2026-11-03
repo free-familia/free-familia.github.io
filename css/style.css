@@ -532,6 +532,23 @@ svg { width: 1em; height: 1em; flex: none; }
 .link-btn { border: 0; background: none; padding: 0; font: inherit; text-decoration: underline; cursor: pointer; }
 @media (prefers-reduced-motion: reduce) { .drawer, .drawer-backdrop { transition: none; } }
 
+/* ---------- compartilhar ---------- */
+.builder-next { gap: 8px; flex-wrap: wrap; }
+.btn-whats { color: #04170c; background: linear-gradient(180deg, #4be38a, #25d366); box-shadow: 0 8px 24px -10px rgba(37, 211, 102, .7); }
+.btn-whats:hover:not(:disabled) { box-shadow: 0 10px 28px -8px rgba(37, 211, 102, .9); }
+.share-dialog {
+  width: min(460px, calc(100vw - 32px)); max-height: calc(100vh - 32px); padding: 16px; overflow: auto;
+  border: 1px solid var(--line-2); border-radius: 18px; background: var(--surface); color: var(--text);
+  box-shadow: 0 30px 80px -20px rgba(0, 0, 0, .9);
+}
+.share-dialog::backdrop { background: rgba(5, 4, 10, .7); backdrop-filter: blur(3px); }
+.share-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.share-head h2 { margin: 0; font-size: 20px; }
+.share-preview { display: block; width: 100%; height: auto; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); }
+.share-help { margin: 10px 0; font-size: 14px; color: var(--muted); }
+.share-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+.share-actions .btn { flex: 1 1 160px; }
+
 /* ---------- som ---------- */
 .sound-btn {
   display: grid; place-items: center; width: 40px; height: 40px; border-radius: 10px; flex: none;
