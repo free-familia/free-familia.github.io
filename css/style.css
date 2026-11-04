@@ -641,11 +641,16 @@ svg { width: 1em; height: 1em; flex: none; }
   .login-who { text-align: center; }
 }
 
+/* card Montar equipes: sem sobra embaixo quando não há resultado */
+#equipes .card-head { margin-bottom: 0; }
+#equipes > :not(.card-head):not([hidden]) { margin-top: 16px; }
+#equipes .login-row { margin: 16px 0 0; }
+
 /* card Montar equipes mais perto do topo */
 @media (max-width: 620px) {
   .hero h1 { font-size: 30px; }
-  .hero-copy { gap: 8px; padding-top: 10px; }
-  .container { padding-top: 12px; }
+  .hero-copy { gap: 8px; padding-top: 10px; padding-bottom: 0; }
+  .container { padding-top: 6px; }
 }
 
 /* ---------- som ---------- */
