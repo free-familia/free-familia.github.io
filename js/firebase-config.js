@@ -15,7 +15,7 @@ window.FREE_FAMILIA_FIREBASE = {
     messagingSenderId: '940142368796',
     appId: '1:940142368796:web:689b0ec359526593ee27d9',
   },
-  admins: ['alessonmiranda@gmail.com'],
+  admins: ['alessonmiranda@gmail.com', 'carvalhoaline098b@gmail.com'],
 };
 
 /* Exemplo:
