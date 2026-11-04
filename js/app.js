@@ -186,16 +186,49 @@
       btn.textContent = u ? 'Sair' : 'Entrar para registrar';
       $('btnLoginHome').querySelector('span').textContent = u ? 'Sair' : 'Entrar';
       $('btnLoginHome').classList.toggle('is-in', !!u);
+      const welcome = WELCOME[email];
       $('loginWho').textContent = u
-        ? (allowed ? `Conectado como ${u.email}. Você pode registrar partidas.` : `Conectado como ${u.email}, só para ver o placar.`)
+        ? (allowed ? (welcome ? welcome.text : `Conectado como ${u.email}. Você pode registrar partidas.`) : `Conectado como ${u.email}, só para ver o placar.`)
         : 'Entre com a conta autorizada para registrar partidas.';
+      $('loginWho').classList.toggle('is-welcome', !!(u && allowed && welcome));
       btn.title = u ? `Conectado como ${u.email}` : 'Entrar com Google para registrar partidas';
       if (u && !allowed) toast(`${u.email} pode ver o placar, mas não registrar.`, { tone: 'warn' });
       applyReadOnly();
       tryMigrate();
+      if (u && allowed && welcome) maybeTour(email, welcome);
     });
     startSync();
     return true;
+  }
+
+  // ---------- boas-vindas e tour na primeira entrada ----------
+  const WELCOME = {
+    'carvalhoaline098b@gmail.com': { name: 'Aline Carvalho', text: 'Olá oficial Aline Carvalho, bem-vinda à guerra.' },
+    'alessonmiranda@gmail.com': { name: 'Alesson Miranda', text: 'Olá oficial Alesson Miranda, bem-vindo à guerra.' },
+  };
+  function maybeTour(email, welcome) {
+    const key = 'free-familia:tour:' + email;
+    try { if (localStorage.getItem(key)) return; } catch (e) { return; }
+    const done = () => { try { localStorage.setItem(key, String(Date.now())); } catch (e) { /* ignore */ } };
+    setTimeout(() => startTour(welcome, done), 700);
+  }
+  function startTour(welcome, done) {
+    if (!window.Tour || window.Tour.active) return;
+    if (location.hash && location.hash !== '#inicio') location.hash = 'inicio';
+    if (!$('manualPanel').hidden) setManual(false, false);
+    Sfx.play('badge');
+    window.Tour.start([
+      { title: welcome.text, text: 'Antes da primeira batalha, um reconhecimento rápido do terreno. São só alguns passos.' },
+      { target: '#btnDraw', title: 'Sortear equipes', text: 'Sorteia as equipes na sorte. Antes, a página pergunta se alguém vai ficar de fora.' },
+      { target: '#btnBalanced', title: 'Sorteio equilibrado', text: 'Monta equipes de força parecida usando o aproveitamento de cada um no ranking.' },
+      { target: '#btnRematch', title: 'Revanche', text: 'Repete as equipes da última partida. Se alguém não puder jogar, dá para escolher quem entra no lugar.' },
+      { target: '#btnManual', title: 'Montar manualmente', text: 'Abre a lista de jogadores para você marcar quem joga e escalar cada um na Equipe Fogo ou na Equipe Gelo.' },
+      { target: '#btnClear', title: 'Limpar', text: 'Desfaz as equipes montadas para começar de novo.' },
+      { target: '#btnLoginHome', title: 'Sua conta', text: 'Você está conectada para registrar partidas. Aqui também dá para sair da conta.'.replace('conectada', welcome.name.startsWith('Aline') ? 'conectada' : 'conectado') },
+      { target: '#btnMenu', title: 'Menu', text: 'No menu ficam Registrar placar, Ranking de vitórias, Conquistas e Histórico de combates.' },
+      { target: '#btnSound', title: 'Som', text: 'Liga ou desliga os sons 8-bit do sorteio, da vitória e das conquistas.' },
+      { title: 'Depois do sorteio', text: 'Aparecem os botões Compartilhar equipes, para mandar a imagem no grupo do WhatsApp, e Registrar placar, para salvar o resultado e somar pontos no ranking.', finish: 'Bora pra guerra!' },
+    ], done);
   }
 
   function tryMigrate() {
