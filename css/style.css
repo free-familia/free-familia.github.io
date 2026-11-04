@@ -93,7 +93,7 @@ svg { width: 1em; height: 1em; flex: none; }
 @media (max-width: 640px) { .nav { display: none; } }
 
 /* ---------- hero / stage ---------- */
-.hero { max-width: 1200px; margin: 0 auto; padding: 20px var(--gutter) 8px; }
+.hero { max-width: 1200px; margin: 0 auto; padding: 20px var(--gutter) 0; }
 .stage {
   position: relative;
   container-type: inline-size;
@@ -177,8 +177,8 @@ svg { width: 1em; height: 1em; flex: none; }
 @keyframes banner-wave { to { transform: translateY(-50%) skewY(-2deg); } }
 
 .hero-copy {
-  display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 12px 32px;
-  padding: 14px 4px 8px;
+  display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 10px 32px;
+  padding: 12px 4px 4px;
 }
 .eyebrow {
   grid-column: 1 / -1; margin: 0; display: inline-flex; align-items: center; gap: 8px;
@@ -639,6 +639,13 @@ svg { width: 1em; height: 1em; flex: none; }
   .login-row[hidden] { display: none; }
   .btn-login { width: 100%; }
   .login-who { text-align: center; }
+}
+
+/* card Montar equipes mais perto do topo */
+@media (max-width: 620px) {
+  .hero h1 { font-size: 30px; }
+  .hero-copy { gap: 8px; padding-top: 10px; }
+  .container { padding-top: 12px; }
 }
 
 /* ---------- som ---------- */
