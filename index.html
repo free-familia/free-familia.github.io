@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=202611032122">
+  <link rel="stylesheet" href="css/style.css?v=202611040009">
 </head>
 <body>
   <a class="skip" href="#main">Pular para o conteúdo</a>
@@ -56,7 +56,6 @@
     <div class="hero-copy">
       <p class="eyebrow"><span class="live-dot" aria-hidden="true"></span> Temporada da família</p>
       <h1 id="heroTitle">Arena de Duelos</h1>
-      <p class="lede">Monte as equipes, registre o placar e descubra quem manda no Free Fire ou COD lá de casa.</p>
       <dl class="stats" id="stats">
         <div class="stat"><dt>Partidas</dt><dd id="statMatches">0</dd></div>
         <div class="stat"><dt>Líder</dt><dd id="statLeader">—</dd></div>
@@ -70,9 +69,8 @@
     <section class="card" id="equipes" aria-labelledby="equipesTitle" data-view="inicio">
       <div class="card-head">
         <div>
-          <p class="kicker">Passo 1</p>
           <h2 id="equipesTitle">Montar equipes</h2>
-          <p class="sub">Sorteie na sorte, equilibre pela força do ranking, repita a última partida ou escale cada jogador manualmente. Máximo de 4 por equipe.</p>
+          <p class="sub">Sorteie, equilibre pela força do ranking, repita a última partida ou monte manualmente. Máximo de 4 por equipe.</p>
         </div>
         <div class="card-actions">
           <button class="btn btn-ghost" id="btnClear" type="button">
@@ -82,6 +80,10 @@
           <button class="btn btn-ghost" id="btnRematch" type="button" title="Repete as equipes da última partida registrada">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 3l4 4-4 4M21 7H8a5 5 0 0 0-5 5M7 21l-4-4 4-4M3 17h13a5 5 0 0 0 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
             Revanche
+          </button>
+          <button class="btn btn-ghost" id="btnManual" type="button" aria-expanded="false" aria-controls="manualPanel">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11V5a1.5 1.5 0 0 1 3 0v5M12 10V4a1.5 1.5 0 0 1 3 0v6M15 10V6a1.5 1.5 0 0 1 3 0v7a7 7 0 0 1-7 7h-1a6 6 0 0 1-5-2.7L3 14a1.5 1.5 0 0 1 2.4-1.8L9 15V8a1.5 1.5 0 0 1 3 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span>Montar manualmente</span>
           </button>
           <button class="btn btn-ghost btn-accent" id="btnBalanced" type="button" title="Monta equipes de força parecida usando o aproveitamento no ranking">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M5 21h14M6 7h12M6 7l-3 7a3 3 0 0 0 6 0zM18 7l-3 7a3 3 0 0 0 6 0z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -94,6 +96,9 @@
         </div>
       </div>
 
+      <div class="team-result" id="teamResult" aria-live="polite"></div>
+
+      <div class="manual-panel" id="manualPanel" hidden>
       <div class="presence">
         <p class="label" id="presenceLabel">Quem vai jogar agora?</p>
         <div class="presence-list" id="presence" role="group" aria-labelledby="presenceLabel"></div>
@@ -131,8 +136,12 @@
           <ul class="slot-list" id="listB" aria-label="Integrantes da equipe azul"></ul>
         </div>
       </div>
+      <div class="manual-done">
+        <button class="btn btn-ghost" id="btnManualDone" type="button">Concluir montagem</button>
+      </div>
+      </div>
 
-      <div class="builder-next">
+      <div class="builder-next" id="builderNext">
         <button class="btn btn-whats" id="btnShare" type="button">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l1.3-4A8 8 0 1 1 8 18.7zM9 9.5c0 3 2.5 5.5 5.5 5.5l1.2-1.3-1.8-1-1 .8a4 4 0 0 1-2.4-2.4l.8-1-1-1.8z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
           Compartilhar equipes
@@ -244,6 +253,34 @@
     </div>
   </footer>
 
+  <dialog class="share-dialog pick-dialog" id="drawDialog" aria-labelledby="drawTitle">
+    <div class="share-head">
+      <h2 id="drawTitle">Alguém vai ficar de fora?</h2>
+      <button class="icon-btn" data-close type="button" aria-label="Fechar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+    </div>
+    <p class="share-help">Desmarque quem não vai jogar. Os marcados entram no sorteio.</p>
+    <div class="presence-list" id="drawPick"></div>
+    <p class="share-help" id="drawCount"></p>
+    <div class="share-actions">
+      <button class="btn btn-ghost" data-close type="button">Cancelar</button>
+      <button class="btn btn-primary" id="drawConfirm" type="button">Sortear</button>
+    </div>
+  </dialog>
+
+  <dialog class="share-dialog pick-dialog" id="rematchDialog" aria-labelledby="rematchTitle">
+    <div class="share-head">
+      <h2 id="rematchTitle">Revanche</h2>
+      <button class="icon-btn" data-close type="button" aria-label="Fechar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+    </div>
+    <p class="share-help" id="rematchInfo">Mesmas equipes da última partida. Se alguém não puder jogar, escolha quem entra no lugar.</p>
+    <div class="rematch-teams" id="rematchTeams"></div>
+    <p class="hint is-warn" id="rematchError"></p>
+    <div class="share-actions">
+      <button class="btn btn-ghost" data-close type="button">Cancelar</button>
+      <button class="btn btn-primary" id="rematchConfirm" type="button">Confirmar revanche</button>
+    </div>
+  </dialog>
+
   <dialog class="share-dialog" id="shareDialog" aria-labelledby="shareTitle">
     <div class="share-head">
       <h2 id="shareTitle">Compartilhar equipes</h2>
@@ -260,11 +297,11 @@
   <div class="toast-region" id="toastRegion" aria-live="polite" aria-atomic="true"></div>
   <canvas class="confetti" id="confetti" aria-hidden="true"></canvas>
 
-  <script src="js/sound.js?v=202611032122"></script>
-  <script src="js/sprites.js?v=202611032122"></script>
-  <script src="js/scene.js?v=202611032122"></script>
-  <script src="js/firebase-config.js?v=202611032122"></script>
-  <script src="js/share.js?v=202611032122"></script>
-  <script src="js/app.js?v=202611032122"></script>
+  <script src="js/sound.js?v=202611040009"></script>
+  <script src="js/sprites.js?v=202611040009"></script>
+  <script src="js/scene.js?v=202611040009"></script>
+  <script src="js/firebase-config.js?v=202611040009"></script>
+  <script src="js/share.js?v=202611040009"></script>
+  <script src="js/app.js?v=202611040009"></script>
 </body>
 </html>

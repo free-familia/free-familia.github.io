@@ -554,13 +554,68 @@ svg { width: 1em; height: 1em; flex: none; }
   #equipes .card-head { flex-direction: column; align-items: stretch; }
   #equipes .card-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; }
   #equipes .card-actions .btn { width: 100%; }
-  #btnBalanced, #btnDraw { grid-column: 1 / -1; }
+  #btnManual, #btnBalanced, #btnDraw { grid-column: 1 / -1; }
   .builder-next { display: grid; grid-template-columns: 1fr; }
   .builder-next .btn { width: 100%; }
   .presence-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .presence-chip { width: 100%; min-width: 0; }
   .presence-chip span:not(.check) { flex: 1; min-width: 0; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
+
+/* ---------- resultado das equipes ---------- */
+.team-result { margin-top: 4px; }
+.result-empty {
+  padding: 28px 16px; text-align: center; color: var(--muted); font-size: 15px;
+  border: 1px dashed var(--line-2); border-radius: 14px;
+}
+.result-empty b { color: var(--text); }
+.result-grid { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.result-vs {
+  align-self: center; font-family: var(--pixel); font-size: 18px; color: #fff8e1;
+  text-shadow: 2px 2px 0 #e8453c, -2px -2px 0 #29b6f6;
+}
+.rteam { border-radius: 14px; padding: 12px; border: 1px solid var(--line); display: grid; gap: 10px; align-content: start; }
+.rteam-a { --c: var(--fire); background: linear-gradient(180deg, var(--fire-soft), transparent 80%), var(--bg-2); border-color: rgba(255, 106, 43, .4); }
+.rteam-b { --c: var(--ice); background: linear-gradient(180deg, var(--ice-soft), transparent 80%), var(--bg-2); border-color: rgba(41, 182, 246, .4); }
+.rteam-name { margin: 0; display: flex; align-items: center; justify-content: space-between; gap: 8px; font-weight: 700; font-size: 18px; color: var(--c); }
+.rteam-name span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rteam-name small { font-size: 13px; color: var(--muted); background: rgba(255, 255, 255, .05); padding: 2px 8px; border-radius: 999px; }
+.rteam ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.rteam .pchip { min-height: 44px; border-color: color-mix(in srgb, var(--c) 30%, var(--line)); }
+.is-drawing .rteam { box-shadow: 0 0 30px -6px var(--c); }
+.is-revealed .rteam .pchip { animation: chip-pop .45s cubic-bezier(.3, 1.6, .5, 1) both; }
+.is-revealed .rteam .pchip:nth-child(2) { animation-delay: .05s; }
+.is-revealed .rteam .pchip:nth-child(3) { animation-delay: .1s; }
+.is-revealed .rteam .pchip:nth-child(4) { animation-delay: .15s; }
+.result-bench { margin: 10px 0 0; color: var(--muted); font-size: 14px; }
+@media (max-width: 520px) {
+  .result-grid { grid-template-columns: minmax(0, 1fr); }
+  .result-vs { justify-self: center; }
+}
+.manual-panel { margin-top: 4px; }
+.manual-done { display: flex; justify-content: flex-end; margin-top: 12px; }
+@media (max-width: 620px) { .manual-done .btn { width: 100%; } }
+
+/* ---------- janelas de sorteio e revanche ---------- */
+.pick-dialog { width: min(560px, calc(100vw - 32px)); }
+.pick-dialog .presence-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.pick-dialog .presence-chip { width: 100%; min-width: 0; }
+.pick-dialog .presence-chip span:not(.check) { flex: 1; min-width: 0; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rematch-teams { display: grid; gap: 10px; }
+.rm-team { border-radius: 14px; padding: 10px; display: grid; gap: 6px; }
+.rm-a { --c: var(--fire); background: var(--fire-soft); }
+.rm-b { --c: var(--ice); background: var(--ice-soft); }
+.rm-team .rteam-name { font-size: 16px; }
+.rm-row { display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 8px; border-radius: 10px; background: var(--surface-2); }
+.rm-row .avatar { width: 28px; height: 26px; }
+.rm-row .pchip-name { flex: 1; min-width: 0; }
+.rm-row select {
+  max-width: 55%; min-height: 36px; padding: 0 28px 0 10px; border-radius: 9px; border: 1px solid var(--line-2);
+  background: var(--surface-3) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 9l6 6 6-6' fill='none' stroke='%239b93ae' stroke-width='2'/%3E%3C/svg%3E") no-repeat right 8px center / 14px;
+  appearance: none; -webkit-appearance: none; font-size: 14px; font-weight: 600; color: var(--text);
+}
+.rm-row select:disabled { opacity: .5; }
+#rematchError:empty { display: none; }
 
 /* ---------- som ---------- */
 .sound-btn {

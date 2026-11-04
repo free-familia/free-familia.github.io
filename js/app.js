@@ -289,6 +289,7 @@
     $('countBench').textContent = bench.length;
     $('countA').classList.toggle('is-full', A.length >= MAX_TEAM);
     $('countB').classList.toggle('is-full', B.length >= MAX_TEAM);
+    renderResult();
     if (document.activeElement !== $('nameA')) $('nameA').value = state.teamNames.A;
     if (document.activeElement !== $('nameB')) $('nameB').value = state.teamNames.B;
   }
@@ -349,25 +350,136 @@
   function lastMatch() {
     return state.matches.reduce((acc, m) => (!acc || Date.parse(m.date) > Date.parse(acc.date) ? m : acc), null);
   }
-  function rematch() {
+  let rmMatch = null;
+  function openRematch() {
     if (drawing) return;
     const m = lastMatch();
     if (!m) { Sfx.play('error'); toast('Ainda não há partida registrada para repetir.', { tone: 'warn' }); return; }
+    rmMatch = m;
+    const inMatch = new Set([...m.teams.A.players, ...m.teams.B.players]);
+    const others = PLAYERS.filter((p) => !inMatch.has(p));
+    $('rematchInfo').textContent = others.length
+      ? `Mesmas equipes do último combate (${m.teams.A.score}×${m.teams.B.score}). Se alguém não puder jogar, escolha quem entra no lugar.`
+      : `Mesmas equipes do último combate (${m.teams.A.score}×${m.teams.B.score}).`;
+    $('rematchError').textContent = '';
+    $('rematchTeams').innerHTML = ['A', 'B'].map((t) => `
+      <div class="rm-team rm-${t.toLowerCase()}">
+        <p class="rteam-name">${esc(m.teams[t].name)}</p>
+        ${m.teams[t].players.map((p, i) => `
+          <div class="rm-row">
+            <img class="avatar" src="${avatar(p, t)}" alt="" width="28" height="26">
+            <span class="pchip-name">${esc(p)}</span>
+            <label class="sr-only" for="rm-${t}-${i}">Substituir ${esc(p)}</label>
+            <select id="rm-${t}-${i}" data-orig="${esc(p)}" data-team="${t}" ${others.length ? '' : 'disabled'}>
+              <option value="">Joga</option>
+              ${others.map((o) => `<option value="${esc(o)}">Sai, entra ${esc(o)}</option>`).join('')}
+            </select>
+          </div>`).join('')}
+      </div>`).join('');
+    $('rematchDialog').showModal();
+    Sfx.play('click');
+  }
+
+  function confirmRematch() {
+    const m = rmMatch;
+    if (!m) return;
+    const sels = Array.from($('rematchTeams').querySelectorAll('select'));
+    const chosen = sels.map((x) => x.value).filter(Boolean);
+    if (new Set(chosen).size !== chosen.length) {
+      Sfx.play('error');
+      $('rematchError').textContent = 'A mesma pessoa foi escolhida para entrar duas vezes. Escolha substitutos diferentes.';
+      return;
+    }
     PLAYERS.forEach((p) => { state.assign[p] = 'bench'; });
-    ['A', 'B'].forEach((t) => m.teams[t].players.forEach((p) => {
-      if (PLAYERS.includes(p)) { state.present[p] = true; state.assign[p] = t; }
-    }));
+    const subs = [];
+    sels.forEach((x) => {
+      const orig = x.dataset.orig, team = x.dataset.team;
+      const who = x.value || orig;
+      if (x.value) { subs.push(`${x.value} no lugar de ${orig}`); if (PLAYERS.includes(orig)) state.present[orig] = false; }
+      if (PLAYERS.includes(who)) { state.present[who] = true; state.assign[who] = team; }
+    });
     state.teamNames.A = m.teams.A.name;
     state.teamNames.B = m.teams.B.name;
     save();
+    $('rematchDialog').close();
     renderPresence();
     renderAllTeams();
-    $('builder').classList.add('is-revealed');
-    setTimeout(() => $('builder').classList.remove('is-revealed'), 700);
+    $('equipes').classList.add('is-revealed');
+    setTimeout(() => $('equipes').classList.remove('is-revealed'), 700);
     Sfx.play('rematch');
-    toast(`Revanche! Mesmas equipes do último combate (${m.teams.A.score}×${m.teams.B.score}).`);
-    location.hash = 'placar';
+    toast(subs.length ? `Revanche com ${listJoin(subs)}.` : 'Revanche! Mesmas equipes do último combate.');
   }
+
+  // ---------- janela "alguém vai ficar de fora?" antes do sorteio ----------
+  let drawMode = 'random', drawSel = new Set();
+  function openDraw(mode) {
+    if (drawing) return;
+    drawMode = mode;
+    drawSel = new Set(PLAYERS.filter((p) => state.present[p]));
+    if (drawSel.size < 2) drawSel = new Set(PLAYERS);
+    $('drawConfirm').textContent = mode === 'balanced' ? 'Fazer sorteio equilibrado' : 'Sortear equipes';
+    renderDrawPick();
+    $('drawDialog').showModal();
+    Sfx.play('click');
+  }
+  function renderDrawPick() {
+    $('drawPick').innerHTML = PLAYERS.map((p) => `
+      <button type="button" class="presence-chip" data-name="${esc(p)}" aria-pressed="${drawSel.has(p)}">
+        <img class="avatar" src="${avatar(p, 'N')}" alt="" width="28" height="26">
+        <span>${esc(p)}</span>
+        <span class="check" aria-hidden="true"></span>
+      </button>`).join('');
+    const n = drawSel.size;
+    const a = Math.min(MAX_TEAM, Math.ceil(n / 2)), b = Math.min(MAX_TEAM, Math.floor(n / 2));
+    const left = PLAYERS.filter((p) => !drawSel.has(p));
+    $('drawCount').textContent = n < 2
+      ? 'Marque pelo menos 2 jogadores.'
+      : `${n} jogadores: ${a} × ${b}` + (n - a - b > 0 ? `, ${n - a - b} no banco` : '') +
+        (left.length ? `. Fora: ${listJoin(left)}.` : '. Ninguém fica de fora.');
+    $('drawConfirm').disabled = n < 2;
+  }
+  function confirmDraw() {
+    if (drawSel.size < 2) return;
+    PLAYERS.forEach((p) => {
+      state.present[p] = drawSel.has(p);
+      if (!drawSel.has(p)) state.assign[p] = 'bench';
+    });
+    save();
+    $('drawDialog').close();
+    renderPresence();
+    drawTeams(drawMode);
+  }
+
+  // ---------- montagem manual ----------
+  function setManual(open, scroll = true) {
+    $('manualPanel').hidden = !open;
+    $('btnManual').setAttribute('aria-expanded', String(open));
+    $('btnManual').querySelector('span').textContent = open ? 'Fechar montagem' : 'Montar manualmente';
+    renderResult();
+    if (scroll) (open ? $('manualPanel') : $('teamResult')).scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+  }
+
+  // ---------- resultado (Equipe Fogo × Equipe Gelo) ----------
+  function renderResult() {
+    const el = $('teamResult');
+    if (!el) return;
+    const A = teamPlayers('A'), B = teamPlayers('B'), bench = teamPlayers('bench');
+    const manualOpen = !$('manualPanel').hidden;
+    el.hidden = manualOpen;
+    $('builderNext').hidden = !(A.length && B.length);
+    if (!A.length && !B.length) {
+      el.innerHTML = '<div class="result-empty">Nenhuma equipe montada ainda. Use <b>Sortear equipes</b>, <b>Sorteio equilibrado</b>, <b>Revanche</b> ou <b>Montar manualmente</b>.</div>';
+      return;
+    }
+    const side = (t, arr) => `
+      <div class="rteam rteam-${t.toLowerCase()}">
+        <p class="rteam-name"><span>${esc(teamName(t))}</span><small>${arr.length}/${MAX_TEAM}</small></p>
+        <ul>${arr.map((p) => `<li class="pchip"><img class="avatar" src="${avatar(p, t)}" alt="" width="28" height="26"><span class="pchip-name">${esc(p)}</span></li>`).join('') || '<li class="slot-empty">Sem jogadores</li>'}</ul>
+      </div>`;
+    el.innerHTML = `<div class="result-grid">${side('A', A)}<div class="result-vs" aria-hidden="true">VS</div>${side('B', B)}</div>` +
+      (bench.length ? `<p class="result-bench">No banco: ${esc(listJoin(bench))}</p>` : '');
+  }
+
 
   let drawing = false;
   function drawTeams(mode) {
@@ -381,9 +493,9 @@
     }
     drawing = true;
     const btn = $('btnDraw');
-    btn.disabled = true; $('btnBalanced').disabled = true; $('btnRematch').disabled = true;
+    btn.disabled = true; $('btnBalanced').disabled = true; $('btnRematch').disabled = true; $('btnManual').disabled = true;
     btn.querySelector('span').textContent = 'Sorteando…';
-    $('builder').classList.add('is-drawing');
+    $('equipes').classList.add('is-drawing');
     const pick = balanced ? balancedSplit(pool) : null;
     const final = balanced ? pick.split : splitTeams(pool);
     const steps = reduce ? 0 : 9;
@@ -401,10 +513,10 @@
       Object.assign(state.assign, final);
       save();
       renderAllTeams();
-      $('builder').classList.remove('is-drawing');
-      $('builder').classList.add('is-revealed');
-      setTimeout(() => $('builder').classList.remove('is-revealed'), 700);
-      btn.disabled = false; $('btnBalanced').disabled = false; $('btnRematch').disabled = !state.matches.length;
+      $('equipes').classList.remove('is-drawing');
+      $('equipes').classList.add('is-revealed');
+      setTimeout(() => $('equipes').classList.remove('is-revealed'), 700);
+      btn.disabled = false; $('btnBalanced').disabled = false; $('btnRematch').disabled = !state.matches.length; $('btnManual').disabled = false;
       btn.querySelector('span').textContent = 'Sortear de novo';
       drawing = false;
       Sfx.play('reveal');
@@ -897,9 +1009,26 @@
       move(b.dataset.name, b.dataset.move);
     });
 
-    $('btnDraw').addEventListener('click', () => drawTeams('random'));
-    $('btnBalanced').addEventListener('click', () => drawTeams('balanced'));
-    $('btnRematch').addEventListener('click', rematch);
+    $('btnDraw').addEventListener('click', () => openDraw('random'));
+    $('btnBalanced').addEventListener('click', () => openDraw('balanced'));
+    $('btnRematch').addEventListener('click', openRematch);
+    $('btnManual').addEventListener('click', () => setManual($('manualPanel').hidden));
+    $('btnManualDone').addEventListener('click', () => setManual(false));
+    $('drawPick').addEventListener('click', (e) => {
+      const b = e.target.closest('.presence-chip');
+      if (!b) return;
+      const p = b.dataset.name;
+      if (drawSel.has(p)) drawSel.delete(p); else drawSel.add(p);
+      Sfx.play('click');
+      renderDrawPick();
+    });
+    $('drawConfirm').addEventListener('click', confirmDraw);
+    $('rematchConfirm').addEventListener('click', confirmRematch);
+    document.querySelectorAll('dialog').forEach((d) => {
+      d.addEventListener('click', (e) => {
+        if (e.target === d || e.target.closest('[data-close]')) d.close();
+      });
+    });
     const snd = $('btnSound');
     const paintSound = () => {
       const on = !Sfx.muted;
