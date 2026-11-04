@@ -468,7 +468,8 @@
     el.hidden = manualOpen;
     $('builderNext').hidden = !(A.length && B.length);
     if (!A.length && !B.length) {
-      el.innerHTML = '<div class="result-empty">Nenhuma equipe montada ainda. Use <b>Sortear equipes</b>, <b>Sorteio equilibrado</b>, <b>Revanche</b> ou <b>Montar manualmente</b>.</div>';
+      el.innerHTML = '';
+      el.hidden = true;
       return;
     }
     const side = (t, arr) => `
