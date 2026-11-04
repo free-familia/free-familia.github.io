@@ -166,6 +166,8 @@
     readOnly = true;
     const btn = $('btnAuth');
     btn.hidden = false;
+    $('loginRow').hidden = false;
+    $('btnLoginHome').addEventListener('click', () => btn.click());
     btn.addEventListener('click', async () => {
       try {
         if (fbUser) await fbAuth.signOut();
@@ -182,6 +184,11 @@
       const allowed = !!u && (!fbAdmins.length || fbAdmins.includes(email));
       readOnly = !allowed;
       btn.textContent = u ? 'Sair' : 'Entrar para registrar';
+      $('btnLoginHome').querySelector('span').textContent = u ? 'Sair' : 'Entrar';
+      $('btnLoginHome').classList.toggle('is-in', !!u);
+      $('loginWho').textContent = u
+        ? (allowed ? `Conectado como ${u.email}. Você pode registrar partidas.` : `Conectado como ${u.email}, só para ver o placar.`)
+        : 'Entre com a conta autorizada para registrar partidas.';
       btn.title = u ? `Conectado como ${u.email}` : 'Entrar com Google para registrar partidas';
       if (u && !allowed) toast(`${u.email} pode ver o placar, mas não registrar.`, { tone: 'warn' });
       applyReadOnly();

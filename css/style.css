@@ -629,6 +629,18 @@ svg { width: 1em; height: 1em; flex: none; }
 .brand-text { display: inline-flex; align-items: center; }
 .brand-text .live-dot { display: inline-block; margin-left: 8px; flex: none; }
 
+.login-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: -4px 0 16px; }
+.login-who { margin: 0; font-size: 14px; color: var(--muted); min-width: 0; }
+.btn-login { border-color: rgba(61, 220, 151, .45); color: var(--ok); }
+.btn-login:hover { background: rgba(61, 220, 151, .1); }
+.btn-login.is-in { border-color: var(--line-2); color: var(--muted); }
+@media (max-width: 620px) {
+  .login-row { display: grid; gap: 6px; margin-top: 0; }
+  .login-row[hidden] { display: none; }
+  .btn-login { width: 100%; }
+  .login-who { text-align: center; }
+}
+
 /* ---------- som ---------- */
 .sound-btn {
   display: grid; place-items: center; width: 40px; height: 40px; border-radius: 10px; flex: none;
