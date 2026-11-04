@@ -178,7 +178,7 @@ svg { width: 1em; height: 1em; flex: none; }
 
 .hero-copy {
   display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 12px 32px;
-  padding: 28px 4px 12px;
+  padding: 14px 4px 8px;
 }
 .eyebrow {
   grid-column: 1 / -1; margin: 0; display: inline-flex; align-items: center; gap: 8px;
@@ -616,6 +616,15 @@ svg { width: 1em; height: 1em; flex: none; }
 }
 .rm-row select:disabled { opacity: .5; }
 #rematchError:empty { display: none; }
+
+/* ---------- cena recortada na vertical (mostra do y 8 ao 132 do desenho 320×144) ---------- */
+.stage { aspect-ratio: 320 / 126; max-width: 100%; }
+.stage-inner { position: absolute; left: 0; right: 0; top: calc(-8 / 126 * 100%); aspect-ratio: 320 / 144; }
+.stage-vs { top: 84.5%; }
+@media (max-width: 620px) {
+  .stat { padding: 8px 10px; }
+  .stat dt { font-size: 10px; letter-spacing: .06em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+}
 
 /* ---------- som ---------- */
 .sound-btn {
