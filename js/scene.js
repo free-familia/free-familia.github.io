@@ -341,13 +341,13 @@
     // avião
     const px = Math.round(-30 + pt * 62);
     if (px < W + 20) {
-      bitmap(PLANE, px, 12, SIL);
-      if (Math.floor(t * 3) % 2) { ctx.fillStyle = '#ff3d3d'; ctx.fillRect(px, 12, 1, 1); }
-      ctx.fillStyle = '#ffe27a'; ctx.fillRect(px + 15, 15, 1, 1);
+      bitmap(PLANE, px, 22, SIL);
+      if (Math.floor(t * 3) % 2) { ctx.fillStyle = '#ff3d3d'; ctx.fillRect(px, 22, 1, 1); }
+      ctx.fillStyle = '#ffe27a'; ctx.fillRect(px + 15, 25, 1, 1);
     }
     const release = 3.06;
     if (pt < release) return { landed: false };
-    let top = 18 + (pt - release) * 22;
+    let top = 30 + (pt - release) * 22;
     const landed = top >= 111;
     if (landed) top = 111;
     let alpha = 1;
